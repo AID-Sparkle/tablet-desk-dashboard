@@ -1,0 +1,16 @@
+{
+  "name": "Desk Dashboard",
+  "short_name": "Dashboard",
+  "description": "Xiaomi Pad 5 Desk Smart Console",
+  "start_url": "/",
+  "display": "fullscreen",
+  "background_color": "#06080e",
+  "theme_color": "#06080e",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ]
+}
