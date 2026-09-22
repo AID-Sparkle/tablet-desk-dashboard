@@ -9,12 +9,14 @@ interface StateCNewsFocusProps {
   news: NewsItem[];
   isLoading: boolean;
   onRefresh?: () => void;
+  language?: 'en' | 'ja';
 }
 
 export const StateC_NewsFocus: React.FC<StateCNewsFocusProps> = ({
   news,
   isLoading,
   onRefresh,
+  language = 'en',
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
@@ -35,10 +37,10 @@ export const StateC_NewsFocus: React.FC<StateCNewsFocusProps> = ({
           </div>
           <div>
             <h2 className="text-sm sm:text-base font-bold text-white tracking-wide">
-              ニュース & トピックス
+              {language === 'en' ? 'News & Headlines' : 'ニュース & トピックス'}
             </h2>
             <p className="text-[11px] text-slate-400">
-              主要メディア・テクノロジー速報
+              {language === 'en' ? 'Top Tech & Gaming Feeds' : '主要メディア・テクノロジー速報'}
             </p>
           </div>
         </div>
@@ -56,14 +58,14 @@ export const StateC_NewsFocus: React.FC<StateCNewsFocusProps> = ({
                   : 'text-slate-300 hover:text-white'
               }`}
             >
-              {cat === 'All' ? 'すべて' : cat}
+              {cat === 'All' ? (language === 'en' ? 'All' : 'すべて') : cat}
             </button>
           ))}
           {onRefresh && (
             <button
               onClick={onRefresh}
               className="p-1.5 text-slate-400 hover:text-white rounded-xl transition-colors ml-1"
-              title="更新"
+              title={language === 'en' ? 'Refresh' : '更新'}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-cyan-400' : ''}`} />
             </button>
@@ -78,6 +80,7 @@ export const StateC_NewsFocus: React.FC<StateCNewsFocusProps> = ({
           isLoading={isLoading}
           maxItems={9}
           layout="grid"
+          language={language}
         />
       </div>
     </div>

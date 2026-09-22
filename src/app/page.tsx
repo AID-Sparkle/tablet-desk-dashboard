@@ -16,6 +16,10 @@ import {
   WifiOff,
   X,
   ExternalLink,
+  MapPin,
+  Clock,
+  Languages,
+  Search,
 } from 'lucide-react';
 import { PixelShifter } from '@/components/PixelShifter';
 import { StateA_Dashboard } from '@/components/StateA_Dashboard';
@@ -40,6 +44,16 @@ export default function DashboardPage() {
   const [pixelOffset, setPixelOffset] = useState<PixelShiftOffset>({ x: 0, y: 0 });
 
   // ----------------------------------------------------------------------------
+  // ユーザー設定 (localStorage永続化)
+  // ----------------------------------------------------------------------------
+  const [timeFormat, setTimeFormat] = useState<'12h' | '24h'>('12h');
+  const [language, setLanguage] = useState<'en' | 'ja'>('en');
+  const [cityInput, setCityInput] = useState<string>('宇都宮');
+  const [currentCityName, setCurrentCityName] = useState<string>('宇都宮');
+  const [citySearchError, setCitySearchError] = useState<string | null>(null);
+  const [isSearchingCity, setIsSearchingCity] = useState<boolean>(false);
+
+  // ----------------------------------------------------------------------------
   // データステート
   // ----------------------------------------------------------------------------
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -59,6 +73,32 @@ export default function DashboardPage() {
   const prevIsPlayingRef = useRef<boolean>(false);
   const prevTrackIdRef = useRef<string | undefined>(undefined);
   const isFirstLoadRef = useRef<boolean>(true);
+
+  // 自動回転タイマー管理用Ref
+  const rotationTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // ----------------------------------------------------------------------------
+  // 0. ローカルストレージ設定の読み込み
+  // ----------------------------------------------------------------------------
+  useEffect(() => {
+    try {
+      const savedTimeFormat = localStorage.getItem('desk_time_format');
+      if (savedTimeFormat === '12h' || savedTimeFormat === '24h') {
+        setTimeFormat(savedTimeFormat);
+      }
+      const savedLang = localStorage.getItem('desk_language');
+      if (savedLang === 'en' || savedLang === 'ja') {
+        setLanguage(savedLang);
+      }
+      const savedCity = localStorage.getItem('desk_city_name');
+      if (savedCity) {
+        setCityInput(savedCity);
+        setCurrentCityName(savedCity);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // ----------------------------------------------------------------------------
   // 1. オフライン / オンライン監視
@@ -90,9 +130,13 @@ export default function DashboardPage() {
   // 3. データフェッチ関数群
   // ----------------------------------------------------------------------------
   // 天気取得 (Open-Meteo)
-  const fetchWeather = useCallback(async () => {
+  const fetchWeather = useCallback(async (cityNameQuery?: string) => {
+    const targetCity = cityNameQuery || currentCityName;
     try {
-      const res = await fetch('/api/weather');
+      const url = targetCity
+        ? `/api/weather?searchCity=${encodeURIComponent(targetCity)}`
+        : '/api/weather';
+      const res = await fetch(url);
       if (res.ok) {
         const data = await res.json();
         setWeather(data);
@@ -102,7 +146,30 @@ export default function DashboardPage() {
     } finally {
       setIsWeatherLoading(false);
     }
-  }, []);
+  }, [currentCityName]);
+
+  // 地名変更のハンドラ
+  const handleApplyCity = async () => {
+    if (!cityInput.trim()) return;
+    setIsSearchingCity(true);
+    setCitySearchError(null);
+    try {
+      const res = await fetch(`/api/weather?searchCity=${encodeURIComponent(cityInput.trim())}`);
+      if (!res.ok) throw new Error('Search failed');
+      const data = await res.json();
+      if (data.cityName) {
+        setWeather(data);
+        setCurrentCityName(data.cityName);
+        try {
+          localStorage.setItem('desk_city_name', data.cityName);
+        } catch {}
+      }
+    } catch (e: any) {
+      setCitySearchError(language === 'en' ? 'Location not found' : '地点が見つかりませんでした');
+    } finally {
+      setIsSearchingCity(false);
+    }
+  };
 
   // ニュース取得 (RSS)
   const fetchNews = useCallback(async () => {
@@ -189,9 +256,7 @@ export default function DashboardPage() {
     fetchNews();
     fetchSpotifyNowPlaying();
 
-    // 天気: 10分
-    const weatherTimer = setInterval(fetchWeather, DASHBOARD_CONFIG.weather.refreshIntervalMs);
-    // RSS: 15分
+    const weatherTimer = setInterval(() => fetchWeather(), DASHBOARD_CONFIG.weather.refreshIntervalMs);
     const newsTimer = setInterval(fetchNews, DASHBOARD_CONFIG.rss.refreshIntervalMs);
 
     return () => {
@@ -215,12 +280,15 @@ export default function DashboardPage() {
   }, [spotifyTrack?.isPlaying, fetchSpotifyNowPlaying]);
 
   // ----------------------------------------------------------------------------
-  // 5. 画面自動ローテーション (State A -> State B -> State C -> State A...)
+  // 5. 画面自動ローテーション (30秒きっちり維持するタイマー管理)
   // ----------------------------------------------------------------------------
-  useEffect(() => {
+  const resetRotationSchedule = useCallback(() => {
+    if (rotationTimerRef.current) {
+      clearInterval(rotationTimerRef.current);
+    }
     if (!isAutoRotationActive) return;
 
-    const timer = setInterval(() => {
+    rotationTimerRef.current = setInterval(() => {
       setViewMode((prev) => {
         let next: ViewMode = 'A';
         if (prev === 'A') next = 'B';
@@ -228,17 +296,40 @@ export default function DashboardPage() {
         else if (prev === 'C') next = 'A';
         return next;
       });
-      // 画面切り替え時にピクセルシフトを微小移動
       applyNextPixelShift();
     }, DASHBOARD_CONFIG.rotationIntervalMs);
-
-    return () => clearInterval(timer);
   }, [isAutoRotationActive, applyNextPixelShift]);
 
-  // 手動で画面を切り替えた時のハンドラ
+  useEffect(() => {
+    resetRotationSchedule();
+    return () => {
+      if (rotationTimerRef.current) {
+        clearInterval(rotationTimerRef.current);
+      }
+    };
+  }, [resetRotationSchedule]);
+
+  // 手動で画面を切り替えた時のハンドラ (※切り替えから30秒きっちり維持)
   const handleManualSwitch = (mode: ViewMode) => {
     setViewMode(mode);
     applyNextPixelShift();
+    // タイマーを即時リセットし、今からきっちり30秒後に次の切り替えをスケジュール
+    resetRotationSchedule();
+  };
+
+  // 設定保存ハンドラ
+  const handleToggleTimeFormat = (format: '12h' | '24h') => {
+    setTimeFormat(format);
+    try {
+      localStorage.setItem('desk_time_format', format);
+    } catch {}
+  };
+
+  const handleToggleLanguage = (lang: 'en' | 'ja') => {
+    setLanguage(lang);
+    try {
+      localStorage.setItem('desk_language', lang);
+    } catch {}
   };
 
   // ----------------------------------------------------------------------------
@@ -256,10 +347,10 @@ export default function DashboardPage() {
       </div>
 
       {/* ========================================================================
-          メインコンテンツ (焼き付き防止ピクセルシフター & 滑らかなクロスフェード)
+          メインコンテンツ (焼き付き防止ピクセルシフター & 滑らかな1000msクロスフェード)
       ======================================================================== */}
       <PixelShifter offset={pixelOffset} className="relative z-10 flex-1 w-full h-[calc(100vh-62px)] p-3 sm:p-4 overflow-hidden">
-        {/* State A: 統合ダッシュボード (絶対配置でクロスフェード) */}
+        {/* State A: 統合ダッシュボード */}
         <div
           className={`absolute inset-3 sm:inset-4 transition-all duration-1000 ease-in-out ${
             viewMode === 'A'
@@ -277,10 +368,12 @@ export default function DashboardPage() {
             news={news}
             isNewsLoading={isNewsLoading}
             isOnline={isOnline}
+            timeFormat={timeFormat}
+            language={language}
           />
         </div>
 
-        {/* State B: Spotify フルフォーカス (絶対配置でクロスフェード) */}
+        {/* State B: Spotify フルフォーカス */}
         <div
           className={`absolute inset-3 sm:inset-4 transition-all duration-1000 ease-in-out ${
             viewMode === 'B'
@@ -293,10 +386,11 @@ export default function DashboardPage() {
             status={spotifyStatus}
             onControl={handleSpotifyControl}
             isControlling={isSpotifyControlling}
+            language={language}
           />
         </div>
 
-        {/* State C: ニュース/RSS フルフォーカス (絶対配置でクロスフェード) */}
+        {/* State C: ニュース/RSS フルフォーカス */}
         <div
           className={`absolute inset-3 sm:inset-4 transition-all duration-1000 ease-in-out ${
             viewMode === 'C'
@@ -308,6 +402,7 @@ export default function DashboardPage() {
             news={news}
             isLoading={isNewsLoading}
             onRefresh={fetchNews}
+            language={language}
           />
         </div>
       </PixelShifter>
@@ -323,7 +418,7 @@ export default function DashboardPage() {
             <div
               onClick={() => handleManualSwitch('B')}
               className="flex items-center gap-2.5 p-1.5 pr-3 rounded-2xl liquid-glass-pill hover:bg-white/10 cursor-pointer transition-all max-w-full group"
-              title="クリックでSpotify大画面に切り替え"
+              title={language === 'en' ? 'Click to open Spotify full view' : 'クリックでSpotify大画面に切り替え'}
             >
               {/* サムネイル */}
               <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-slate-800 shrink-0 border border-white/15">
@@ -368,7 +463,7 @@ export default function DashboardPage() {
                   onClick={() => handleSpotifyControl(spotifyTrack.isPlaying ? 'pause' : 'play')}
                   disabled={isSpotifyControlling}
                   className="p-1 rounded-full text-slate-200 hover:text-white hover:bg-white/15 transition-all"
-                  title={spotifyTrack.isPlaying ? '一時停止' : '再生'}
+                  title={spotifyTrack.isPlaying ? 'Pause' : 'Play'}
                 >
                   {spotifyTrack.isPlaying ? (
                     <Pause className="w-3.5 h-3.5 fill-current" />
@@ -380,7 +475,7 @@ export default function DashboardPage() {
                   onClick={() => handleSpotifyControl('next')}
                   disabled={isSpotifyControlling}
                   className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/15 transition-all"
-                  title="次の曲"
+                  title="Next"
                 >
                   <SkipForward className="w-3.5 h-3.5 fill-current" />
                 </button>
@@ -406,7 +501,7 @@ export default function DashboardPage() {
               {/* 焼き付き防止インジケーター */}
               <div
                 className="hidden lg:flex items-center gap-1.5 text-[10px] text-slate-300 liquid-glass-pill px-2.5 py-1 rounded-full"
-                title={`ピクセルシフト: x=${pixelOffset.x}px, y=${pixelOffset.y}px`}
+                title={`Pixel Shift: x=${pixelOffset.x}px, y=${pixelOffset.y}px`}
               >
                 <ShieldCheck className="w-3 h-3 text-cyan-400" />
                 <span>Shift ({pixelOffset.x}, {pixelOffset.y})</span>
@@ -415,42 +510,45 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* 中央: 画面切り替えタブ (iOSリキッドガラスピル) */}
+        {/* 中央: 画面切り替えタブ (英語 / 日本語対応) */}
         <div className="flex items-center gap-1.5 liquid-glass-pill p-1 rounded-2xl shadow-lg">
           <button
+            id="tab-main"
             onClick={() => handleManualSwitch('A')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'A'
                 ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30 font-bold'
                 : 'text-slate-300 hover:text-white'
             }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            <span>メイン</span>
+            <span>{language === 'en' ? 'MAIN' : 'メイン'}</span>
           </button>
 
           <button
+            id="tab-spotify"
             onClick={() => handleManualSwitch('B')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'B'
                 ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 font-bold'
                 : 'text-slate-300 hover:text-white'
             }`}
           >
             <Music className="w-3.5 h-3.5" />
-            <span>Spotify</span>
+            <span>{language === 'en' ? 'SPOTIFY' : 'Spotify'}</span>
           </button>
 
           <button
+            id="tab-news"
             onClick={() => handleManualSwitch('C')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'C'
                 ? 'bg-purple-500 text-slate-950 shadow-md shadow-purple-500/30 font-bold'
                 : 'text-slate-300 hover:text-white'
             }`}
           >
             <Newspaper className="w-3.5 h-3.5" />
-            <span>ニュース</span>
+            <span>{language === 'en' ? 'NEWS' : 'ニュース'}</span>
           </button>
         </div>
 
@@ -464,17 +562,17 @@ export default function DashboardPage() {
                 ? 'liquid-glass-pill text-cyan-300 border-cyan-400/30'
                 : 'bg-amber-500/20 text-amber-200 border border-amber-400/30'
             }`}
-            title={isAutoRotationActive ? '自動回転を一時停止' : '自動回転を再開'}
+            title={isAutoRotationActive ? 'Pause auto-rotation' : 'Resume auto-rotation'}
           >
             {isAutoRotationActive ? (
               <>
                 <PauseCircle className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden sm:inline">30s 自動切替</span>
+                <span className="hidden sm:inline">{language === 'en' ? '30s Auto' : '30s 自動切替'}</span>
               </>
             ) : (
               <>
                 <PlayCircle className="w-3.5 h-3.5 text-amber-400" />
-                <span className="hidden sm:inline">固定中</span>
+                <span className="hidden sm:inline">{language === 'en' ? 'Fixed' : '固定中'}</span>
               </>
             )}
           </button>
@@ -483,7 +581,7 @@ export default function DashboardPage() {
           <button
             onClick={() => setShowSettingsModal(true)}
             className="p-2 rounded-xl liquid-glass-pill text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-            title="設定・APIキー確認"
+            title={language === 'en' ? 'Settings & Preferences' : '設定・カスタマイズ'}
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -491,17 +589,19 @@ export default function DashboardPage() {
       </footer>
 
       {/* ========================================================================
-          設定 & APIキーガイドモーダル (iOSリキッドガラス調)
+          設定 & カスタマイズモーダル (iOSリキッドガラス調)
       ======================================================================== */}
       {showSettingsModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
-          <div className="liquid-glass max-w-2xl w-full rounded-3xl p-6 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
+          <div className="liquid-glass max-w-2xl w-full rounded-3xl p-6 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border border-white/15">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-2xl liquid-glass-pill text-cyan-400">
                   <Settings className="w-5 h-5" />
                 </div>
-                <h3 className="text-lg font-bold text-white">ダッシュボード設定 & ガイド</h3>
+                <h3 className="text-lg font-bold text-white">
+                  {language === 'en' ? 'Dashboard Settings' : 'ダッシュボード設定'}
+                </h3>
               </div>
               <button
                 onClick={() => setShowSettingsModal(false)}
@@ -511,63 +611,153 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-sm text-slate-300">
-              {/* 天気設定状況 */}
-              <div className="p-4 rounded-2xl liquid-glass-subtle">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-white">🌤 天気設定 (Open-Meteo)</span>
-                  <span className="text-xs text-emerald-400 font-mono font-medium">稼働中（APIキー不要）</span>
+            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-sm text-slate-200">
+              {/* 1. 時計フォーマット切り替え (12h / 24h) */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl liquid-glass-pill text-cyan-400">
+                    <Clock className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white block">
+                      {language === 'en' ? 'Time Format' : '時刻表示形式'}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {language === 'en' ? 'Toggle 12-hour (AM/PM) or 24-hour' : '12時間（AM/PM）または24時間表示'}
+                    </span>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-400">
-                  地域: <strong>宇都宮市</strong> (36.5658, 139.8836)
-                </p>
-                <p className="text-[11px] text-slate-500 mt-1">
-                  地域を変更したい場合は <code>.env.local</code> の <code>WEATHER_LATITUDE</code>, <code>WEATHER_LONGITUDE</code>, <code>WEATHER_CITY_NAME</code> を書き換えてください。
+
+                <div className="flex items-center gap-1 liquid-glass-pill p-1 rounded-xl">
+                  <button
+                    onClick={() => handleToggleTimeFormat('12h')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      timeFormat === '12h'
+                        ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/25'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    12h
+                  </button>
+                  <button
+                    onClick={() => handleToggleTimeFormat('24h')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      timeFormat === '24h'
+                        ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/25'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    24h
+                  </button>
+                </div>
+              </div>
+
+              {/* 2. 言語切り替え (English / 日本語) */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl liquid-glass-pill text-purple-400">
+                    <Languages className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white block">
+                      {language === 'en' ? 'Interface Language' : '表示言語'}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {language === 'en' ? 'English (articles remain Japanese) or Japanese' : 'UI表記の言語切り替え'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 liquid-glass-pill p-1 rounded-xl">
+                  <button
+                    onClick={() => handleToggleLanguage('en')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      language === 'en'
+                        ? 'bg-purple-500 text-white font-bold shadow-md shadow-purple-500/25'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    English
+                  </button>
+                  <button
+                    onClick={() => handleToggleLanguage('ja')}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      language === 'ja'
+                        ? 'bg-purple-500 text-white font-bold shadow-md shadow-purple-500/25'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    日本語
+                  </button>
+                </div>
+              </div>
+
+              {/* 3. 天気の地点変更 */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-xl liquid-glass-pill text-amber-400">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white block">
+                      {language === 'en' ? 'Weather Location' : '天気の地点設定'}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {language === 'en' ? 'Enter city name (e.g. 宇都宮, Tokyo, Osaka)' : '地名を入力するだけで即座に天気が切り替わります'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 mt-3">
+                  <input
+                    type="text"
+                    value={cityInput}
+                    onChange={(e) => setCityInput(e.target.value)}
+                    placeholder={language === 'en' ? 'City name...' : '地名を入力...'}
+                    className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleApplyCity();
+                    }}
+                  />
+                  <button
+                    onClick={handleApplyCity}
+                    disabled={isSearchingCity}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-cyan-500/20 disabled:opacity-50"
+                  >
+                    <Search className="w-3.5 h-3.5" />
+                    <span>{isSearchingCity ? '...' : language === 'en' ? 'Apply' : '適用'}</span>
+                  </button>
+                </div>
+                {citySearchError && (
+                  <p className="text-xs text-rose-400 mt-1.5">{citySearchError}</p>
+                )}
+                <p className="text-[11px] text-slate-400 mt-2">
+                  {language === 'en' ? 'Current:' : '現在の地点:'} <strong className="text-slate-200">{currentCityName}</strong>
                 </p>
               </div>
 
-              {/* Spotify連携状況 */}
+              {/* 4. Spotify連携情報 */}
               <div className="p-4 rounded-2xl liquid-glass-subtle">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-white">🎵 Spotify連携</span>
+                  <span className="font-semibold text-white">🎵 Spotify</span>
                   <span className="text-xs font-mono text-emerald-400 font-medium">
-                    状態: {spotifyStatus}
+                    Status: {spotifyStatus}
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 mb-3">
-                  連携完了済みです。曲を再生すると自動的にタイトル・ジャケットが表示され、画面下部ミニプレイヤーやフル画面プレイヤーで操作できます。
+                  {language === 'en'
+                    ? 'Connected. Now Playing track is displayed in bottom bar & full view.'
+                    : '連携完了済みです。曲を再生すると自動表示されます。'}
                 </p>
                 <a
                   href="/api/spotify/login"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all"
                 >
-                  <span>トークン再取得・ログイン</span>
+                  <span>{language === 'en' ? 'Re-authenticate' : 'トークン再取得'}</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
-              </div>
-
-              {/* 給電制御 (SwitchBot) */}
-              <div className="p-4 rounded-2xl liquid-glass-subtle">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-white">🔌 SwitchBot 給電プロキシ</span>
-                  <span className="text-xs text-slate-400 font-mono">/api/switchbot</span>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Xiaomi Pad 5のMacroDroidから <code>https://[ドメイン]/api/switchbot?state=on</code> または <code>off</code> をヘッダー <code>x-api-key</code> 付きで送信することで、20%〜80%ヒステリシス充電を実行できます。
-                </p>
-              </div>
-
-              {/* PC連動 (Fully Kiosk) */}
-              <div className="p-4 rounded-2xl liquid-glass-subtle">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-white">💻 PC連動 (画面ON/OFF)</span>
-                  <span className="text-xs text-slate-400 font-mono">scripts/screen-control.ps1</span>
-                </div>
-                <p className="text-xs text-slate-400 leading-relaxed">
-                  Windows PCのログオン・ロック時に、タブレットのFully Kiosk Browser REST APIを叩いて画面を自動点灯・消灯させます。詳細は <code>docs/SETUP_GUIDE.md</code> をご覧ください。
-                </p>
               </div>
             </div>
 
@@ -576,7 +766,7 @@ export default function DashboardPage() {
                 onClick={() => setShowSettingsModal(false)}
                 className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-cyan-500/20"
               >
-                閉じる
+                {language === 'en' ? 'Close' : '閉じる'}
               </button>
             </div>
           </div>

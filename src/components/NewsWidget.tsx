@@ -9,15 +9,24 @@ interface NewsWidgetProps {
   isLoading?: boolean;
   maxItems?: number;
   layout?: 'compact-list' | 'grid';
+  language?: 'en' | 'ja';
 }
 
-function timeAgo(dateString: string): string {
+function timeAgo(dateString: string, language: 'en' | 'ja' = 'en'): string {
   const date = new Date(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMinutes = Math.floor(diffMs / (1000 * 60));
   const diffHours = Math.floor(diffMinutes / 60);
   const diffDays = Math.floor(diffHours / 24);
+
+  if (language === 'en') {
+    if (diffMinutes < 1) return 'Just now';
+    if (diffMinutes < 60) return `${diffMinutes}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  }
 
   if (diffMinutes < 1) return '今';
   if (diffMinutes < 60) return `${diffMinutes}分前`;
@@ -45,6 +54,7 @@ export const NewsWidget: React.FC<NewsWidgetProps> = ({
   isLoading = false,
   maxItems = 4,
   layout = 'compact-list',
+  language = 'en',
 }) => {
   const displayItems = news.slice(0, maxItems);
 
@@ -65,7 +75,9 @@ export const NewsWidget: React.FC<NewsWidgetProps> = ({
     return (
       <div className="liquid-glass rounded-3xl p-5 h-full flex flex-col items-center justify-center text-slate-400">
         <Newspaper className="w-7 h-7 text-slate-500 mb-2" />
-        <span className="text-xs">ニュースを受信中...</span>
+        <span className="text-xs">
+          {language === 'en' ? 'Receiving news feeds...' : 'ニュースを受信中...'}
+        </span>
       </div>
     );
   }
@@ -78,18 +90,20 @@ export const NewsWidget: React.FC<NewsWidgetProps> = ({
         <div className="flex items-center justify-between pb-2 mb-1 border-b border-white/10 shrink-0">
           <div className="flex items-center gap-2">
             <Newspaper className="w-4 h-4 text-cyan-400" />
-            <h3 className="text-xs sm:text-sm font-semibold text-slate-200">最新ニュース & トピックス</h3>
+            <h3 className="text-xs sm:text-sm font-semibold text-slate-200">
+              {language === 'en' ? 'Latest News & Topics' : '最新ニュース & トピックス'}
+            </h3>
           </div>
           <div className="flex items-center gap-1.5 text-[11px] text-slate-400">
             <Sparkles className="w-3 h-3 text-cyan-400" />
-            <span>リアルタイム速報</span>
+            <span>{language === 'en' ? 'Live Feed' : 'リアルタイム速報'}</span>
           </div>
         </div>
 
         {/* リスト表示 */}
         <div className="flex-1 overflow-y-auto divide-y divide-white/5">
           {displayItems.map((item) => (
-            <NewsListItem key={item.id} item={item} />
+            <NewsListItem key={item.id} item={item} language={language} />
           ))}
         </div>
       </div>
@@ -100,14 +114,17 @@ export const NewsWidget: React.FC<NewsWidgetProps> = ({
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 h-full overflow-y-auto p-1">
       {displayItems.map((item) => (
-        <NewsGridCard key={item.id} item={item} />
+        <NewsGridCard key={item.id} item={item} language={language} />
       ))}
     </div>
   );
 };
 
 // コンパクトリスト内アイテム
-const NewsListItem: React.FC<{ item: NewsItem }> = ({ item }) => {
+const NewsListItem: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
+  item,
+  language,
+}) => {
   const [imgFailed, setImgFailed] = useState(false);
 
   return (
@@ -143,7 +160,7 @@ const NewsListItem: React.FC<{ item: NewsItem }> = ({ item }) => {
           </span>
           <span className="text-[10px] text-slate-400 font-mono flex items-center gap-1">
             <Clock className="w-2.5 h-2.5" />
-            {timeAgo(item.pubDate)}
+            {timeAgo(item.pubDate, language)}
           </span>
         </div>
         <p className="text-xs font-medium text-slate-200 group-hover:text-cyan-300 line-clamp-2 transition-colors leading-tight">
@@ -157,7 +174,10 @@ const NewsListItem: React.FC<{ item: NewsItem }> = ({ item }) => {
 };
 
 // グリッド内カード (State C 用: 画像小さめ・タイトルがしっかり入る設計)
-const NewsGridCard: React.FC<{ item: NewsItem }> = ({ item }) => {
+const NewsGridCard: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
+  item,
+  language,
+}) => {
   const [imgFailed, setImgFailed] = useState(false);
 
   return (
@@ -192,7 +212,7 @@ const NewsGridCard: React.FC<{ item: NewsItem }> = ({ item }) => {
           </span>
           <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
             <Clock className="w-2.5 h-2.5" />
-            {timeAgo(item.pubDate)}
+            {timeAgo(item.pubDate, language)}
           </span>
         </div>
 
@@ -200,11 +220,6 @@ const NewsGridCard: React.FC<{ item: NewsItem }> = ({ item }) => {
         <h4 className="text-xs sm:text-sm font-bold text-slate-100 group-hover:text-cyan-300 line-clamp-2 leading-snug transition-colors">
           {item.title}
         </h4>
-      </div>
-
-      <div className="flex items-center justify-end text-[11px] text-slate-400 group-hover:text-cyan-400 mt-2.5 pt-2 border-t border-white/10 gap-1 transition-colors shrink-0">
-        <span>記事を読む</span>
-        <ExternalLink className="w-3 h-3" />
       </div>
     </a>
   );

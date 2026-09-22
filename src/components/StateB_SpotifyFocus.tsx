@@ -20,6 +20,7 @@ interface StateBSpotifyFocusProps {
   status: SpotifyStatus;
   onControl: (command: 'play' | 'pause' | 'next' | 'previous') => void;
   isControlling: boolean;
+  language?: 'en' | 'ja';
 }
 
 function formatDuration(ms: number): string {
@@ -34,6 +35,7 @@ export const StateB_SpotifyFocus: React.FC<StateBSpotifyFocusProps> = ({
   status,
   onControl,
   isControlling,
+  language = 'en',
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -45,9 +47,13 @@ export const StateB_SpotifyFocus: React.FC<StateBSpotifyFocusProps> = ({
           <div className="w-16 h-16 mx-auto rounded-2xl liquid-glass-pill flex items-center justify-center mb-4 text-emerald-400">
             <Radio className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Spotify 未連携</h2>
+          <h2 className="text-xl font-bold text-white mb-2">
+            {language === 'en' ? 'Spotify Not Connected' : 'Spotify 未連携'}
+          </h2>
           <p className="text-sm text-slate-300 mb-6 leading-relaxed">
-            Spotify Developer AppのClient IDを設定し、ログイン認証を行うとここで迫力のフル画面プレイヤーが利用できます。
+            {language === 'en'
+              ? 'Please login and authenticate your Spotify account to enjoy full screen playback.'
+              : 'Spotify Developer AppのClient IDを設定し、ログイン認証を行うとここで迫力のフル画面プレイヤーが利用できます。'}
           </p>
           <a
             href="/api/spotify/login"
@@ -55,7 +61,7 @@ export const StateB_SpotifyFocus: React.FC<StateBSpotifyFocusProps> = ({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-sm font-bold transition-all shadow-lg shadow-emerald-500/25 active:scale-98"
           >
-            <span>Spotify 認証を開始</span>
+            <span>{language === 'en' ? 'Connect Spotify' : 'Spotify 認証を開始'}</span>
             <ExternalLink className="w-4 h-4" />
           </a>
         </div>
@@ -69,9 +75,13 @@ export const StateB_SpotifyFocus: React.FC<StateBSpotifyFocusProps> = ({
       <div className="h-full w-full flex items-center justify-center p-6">
         <div className="liquid-glass max-w-md w-full rounded-3xl p-8 text-center">
           <Disc3 className="w-16 h-16 mx-auto text-slate-400 animate-spin-slow mb-4" />
-          <h2 className="text-xl font-bold text-white mb-2">再生待機中</h2>
+          <h2 className="text-xl font-bold text-white mb-2">
+            {language === 'en' ? 'Waiting for Playback' : '再生待機中'}
+          </h2>
           <p className="text-sm text-slate-300 mb-6">
-            PCやスマートフォンでSpotifyの再生を開始してください。
+            {language === 'en'
+              ? 'Play music on your PC, smartphone, or tablet Spotify app.'
+              : 'PCやスマートフォンでSpotifyの再生を開始してください。'}
           </p>
           <button
             onClick={() => onControl('play')}
@@ -79,7 +89,7 @@ export const StateB_SpotifyFocus: React.FC<StateBSpotifyFocusProps> = ({
             className="inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl liquid-glass-pill hover:bg-white/10 text-slate-100 text-sm font-semibold transition-all shadow-md active:scale-95"
           >
             <Play className="w-4 h-4 fill-current" />
-            <span>前回の再生を再開</span>
+            <span>{language === 'en' ? 'Resume Playback' : '前回の再生を再開'}</span>
           </button>
         </div>
       </div>

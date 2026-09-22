@@ -20,6 +20,7 @@ interface SpotifyWidgetProps {
   status: SpotifyStatus;
   onControl: (command: 'play' | 'pause' | 'next' | 'previous') => void;
   isControlling?: boolean;
+  language?: 'en' | 'ja';
 }
 
 function formatDuration(ms: number): string {
@@ -34,6 +35,7 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
   status,
   onControl,
   isControlling = false,
+  language = 'en',
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -44,7 +46,7 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-semibold text-emerald-300 liquid-glass-pill px-3 py-1 rounded-full">
             <Music className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Spotify 未設定</span>
+            <span>{language === 'en' ? 'Spotify Not Connected' : 'Spotify 未設定'}</span>
           </div>
           <HelpCircle className="w-4 h-4 text-slate-400" />
         </div>
@@ -53,9 +55,13 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
           <div className="w-12 h-12 mx-auto rounded-2xl liquid-glass-pill flex items-center justify-center mb-2">
             <Radio className="w-6 h-6 text-slate-300" />
           </div>
-          <p className="text-sm font-semibold text-slate-100">Spotifyアカウントと連携</p>
+          <p className="text-sm font-semibold text-slate-100">
+            {language === 'en' ? 'Connect Spotify Account' : 'Spotifyアカウントと連携'}
+          </p>
           <p className="text-xs text-slate-400 mt-1">
-            再生中の楽曲表示や曲送り等の操作が可能になります
+            {language === 'en'
+              ? 'Display now playing track and control playback'
+              : '再生中の楽曲表示や曲送り等の操作が可能になります'}
           </p>
         </div>
 
@@ -65,7 +71,7 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
           rel="noopener noreferrer"
           className="flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-2xl bg-emerald-500/90 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all shadow-lg shadow-emerald-500/25 active:scale-98"
         >
-          <span>Spotifyでログインして連携</span>
+          <span>{language === 'en' ? 'Login with Spotify' : 'Spotifyでログインして連携'}</span>
           <ExternalLink className="w-3.5 h-3.5" />
         </a>
       </div>
@@ -79,16 +85,22 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs font-medium text-slate-300 liquid-glass-pill px-3 py-1 rounded-full">
             <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
-            <span>Spotify 待機中</span>
+            <span>{language === 'en' ? 'Spotify Idle' : 'Spotify 待機中'}</span>
           </div>
-          <span className="text-[11px] text-slate-400">PC / スマホで再生待機</span>
+          <span className="text-[11px] text-slate-400">
+            {language === 'en' ? 'Ready on PC / Phone' : 'PC / スマホで再生待機'}
+          </span>
         </div>
 
         <div className="my-auto text-center py-3">
           <Disc3 className="w-12 h-12 mx-auto text-slate-500 animate-spin-slow mb-2" />
-          <p className="text-sm font-semibold text-slate-200">再生中の曲はありません</p>
+          <p className="text-sm font-semibold text-slate-200">
+            {language === 'en' ? 'No track playing' : '再生中の曲はありません'}
+          </p>
           <p className="text-xs text-slate-400 mt-1">
-            PCやスマートフォンで曲を再生すると自動表示されます
+            {language === 'en'
+              ? 'Play music on your device to display here'
+              : 'PCやスマートフォンで曲を再生すると自動表示されます'}
           </p>
         </div>
 
@@ -99,7 +111,7 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
             className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all disabled:opacity-50 shadow-md shadow-emerald-500/20 active:scale-95"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
-            <span>再開</span>
+            <span>{language === 'en' ? 'Resume' : '再開'}</span>
           </button>
         </div>
       </div>
@@ -112,16 +124,16 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
       <div className="liquid-glass rounded-3xl p-5 h-full flex flex-col justify-between border-rose-500/20">
         <div className="flex items-center gap-2 text-xs font-medium text-rose-300 liquid-glass-pill px-3 py-1 rounded-full bg-rose-500/20 border-rose-400/30">
           <AlertCircle className="w-3.5 h-3.5 text-rose-400" />
-          <span>Spotify 通信エラー</span>
+          <span>{language === 'en' ? 'Connection Error' : 'Spotify 通信エラー'}</span>
         </div>
         <p className="text-xs text-slate-300 my-auto text-center">
-          通信に失敗しました。自動再試行中...
+          {language === 'en' ? 'Connection failed. Retrying...' : '通信に失敗しました。自動再試行中...'}
         </p>
         <button
           onClick={() => window.location.reload()}
           className="text-xs text-cyan-300 hover:underline text-center"
         >
-          再読み込み
+          {language === 'en' ? 'Reload' : '再読み込み'}
         </button>
       </div>
     );
@@ -145,7 +157,15 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full liquid-glass-pill text-emerald-300 text-xs font-medium">
             <span className={`w-1.5 h-1.5 rounded-full ${track.isPlaying ? 'bg-emerald-400 animate-ping' : 'bg-slate-400'}`} />
-            <span>{track.isPlaying ? '再生中' : '一時停止'}</span>
+            <span>
+              {track.isPlaying
+                ? language === 'en'
+                  ? 'Now Playing'
+                  : '再生中'
+                : language === 'en'
+                ? 'Paused'
+                : '一時停止'}
+            </span>
           </div>
           {track.deviceName && (
             <span className="text-[11px] text-slate-300 max-w-[120px] truncate">

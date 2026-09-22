@@ -28,10 +28,32 @@ function getWeatherDescription(code: number): string {
   }
 }
 
-export async function GET() {
-  const lat = process.env.WEATHER_LATITUDE || DASHBOARD_CONFIG.weather.latitude;
-  const lon = process.env.WEATHER_LONGITUDE || DASHBOARD_CONFIG.weather.longitude;
-  const cityName = process.env.WEATHER_CITY_NAME || DASHBOARD_CONFIG.weather.cityName;
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  let lat = searchParams.get('lat') || process.env.WEATHER_LATITUDE || DASHBOARD_CONFIG.weather.latitude;
+  let lon = searchParams.get('lon') || process.env.WEATHER_LONGITUDE || DASHBOARD_CONFIG.weather.longitude;
+  let cityName = searchParams.get('city') || process.env.WEATHER_CITY_NAME || DASHBOARD_CONFIG.weather.cityName;
+
+  // 地名のみ渡された場合、Open-Meteo Geocoding API で座標を自動検索
+  const searchCity = searchParams.get('searchCity');
+  if (searchCity) {
+    try {
+      const geoRes = await fetch(
+        `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(searchCity)}&count=1&language=ja&format=json`
+      );
+      if (geoRes.ok) {
+        const geoData = await geoRes.json();
+        if (geoData.results && geoData.results.length > 0) {
+          const top = geoData.results[0];
+          lat = top.latitude.toString();
+          lon = top.longitude.toString();
+          cityName = top.name;
+        }
+      }
+    } catch (e) {
+      console.warn('Geocoding search failed:', e);
+    }
+  }
 
   const url = new URL('https://api.open-meteo.com/v1/forecast');
   url.searchParams.set('latitude', lat);

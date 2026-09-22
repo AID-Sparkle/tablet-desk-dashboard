@@ -19,31 +19,32 @@ import { WeatherData } from '@/types';
 interface WeatherWidgetProps {
   weather: WeatherData | null;
   isLoading?: boolean;
+  language?: 'en' | 'ja';
+}
+
+// 英語の天候説明マッピング
+function getWeatherDescEn(descJa: string): string {
+  if (descJa.includes('快晴')) return 'Clear Sky';
+  if (descJa.includes('晴れ')) return 'Sunny';
+  if (descJa.includes('一部曇り')) return 'Partly Cloudy';
+  if (descJa.includes('曇り')) return 'Overcast';
+  if (descJa.includes('霧')) return 'Foggy';
+  if (descJa.includes('雷雨')) return 'Thunderstorm';
+  if (descJa.includes('雪')) return 'Snow';
+  if (descJa.includes('小雨')) return 'Light Rain';
+  if (descJa.includes('雨')) return 'Rain';
+  return descJa;
 }
 
 // WMOコードに応じたアイコンの取得
 function getWeatherIcon(code: number, isDay: boolean = true) {
-  if (code === 0) {
-    return <Sun className="w-9 h-9 text-amber-400 animate-spin-slow" />;
-  }
-  if (code === 1 || code === 2) {
-    return <CloudSun className="w-9 h-9 text-amber-300" />;
-  }
-  if (code === 3) {
-    return <Cloud className="w-9 h-9 text-slate-400" />;
-  }
-  if (code >= 45 && code <= 48) {
-    return <CloudFog className="w-9 h-9 text-slate-300" />;
-  }
-  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) {
-    return <CloudRain className="w-9 h-9 text-cyan-400" />;
-  }
-  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) {
-    return <CloudSnow className="w-9 h-9 text-blue-200" />;
-  }
-  if (code >= 95) {
-    return <CloudLightning className="w-9 h-9 text-yellow-400" />;
-  }
+  if (code === 0) return <Sun className="w-9 h-9 text-amber-400 animate-spin-slow" />;
+  if (code === 1 || code === 2) return <CloudSun className="w-9 h-9 text-amber-300" />;
+  if (code === 3) return <Cloud className="w-9 h-9 text-slate-400" />;
+  if (code >= 45 && code <= 48) return <CloudFog className="w-9 h-9 text-slate-300" />;
+  if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return <CloudRain className="w-9 h-9 text-cyan-400" />;
+  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return <CloudSnow className="w-9 h-9 text-blue-200" />;
+  if (code >= 95) return <CloudLightning className="w-9 h-9 text-yellow-400" />;
   return <Sun className="w-9 h-9 text-amber-400" />;
 }
 
@@ -57,7 +58,11 @@ function getSmallWeatherIcon(code: number) {
   return <CloudSun className="w-4 h-4 text-amber-300" />;
 }
 
-export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ weather, isLoading = false }) => {
+export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
+  weather,
+  isLoading = false,
+  language = 'en',
+}) => {
   if (isLoading && !weather) {
     return (
       <div className="liquid-glass rounded-3xl p-5 h-full flex flex-col justify-center animate-pulse">
@@ -72,10 +77,12 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ weather, isLoading
     return (
       <div className="liquid-glass rounded-3xl p-5 h-full flex flex-col items-center justify-center text-slate-400">
         <Cloud className="w-8 h-8 text-slate-500 mb-2" />
-        <span className="text-xs">天気データを取得中...</span>
+        <span className="text-xs">{language === 'en' ? 'Fetching weather...' : '天気データを取得中...'}</span>
       </div>
     );
   }
+
+  const weatherText = language === 'en' ? getWeatherDescEn(weather.weatherDescription) : weather.weatherDescription;
 
   return (
     <div className="liquid-glass rounded-3xl p-5 flex flex-col justify-between h-full relative overflow-hidden group">
@@ -89,7 +96,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ weather, isLoading
             {weather.cityName}
           </span>
           <span className="text-xs text-slate-300 font-medium">
-            {weather.weatherDescription}
+            {weatherText}
           </span>
         </div>
         <div className="flex items-center gap-3 text-xs text-slate-300">
@@ -112,7 +119,7 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ weather, isLoading
           </span>
           <span className="text-2xl sm:text-3xl font-light text-cyan-300 ml-1">°C</span>
           <span className="text-xs text-slate-400 ml-3">
-            体感 {weather.apparentTemp}°
+            {language === 'en' ? 'Feels like' : '体感'} {weather.apparentTemp}°
           </span>
         </div>
         <div className="p-3 rounded-2xl liquid-glass-pill shadow-inner">
@@ -125,21 +132,27 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({ weather, isLoading
         <div className="flex items-center gap-1.5 text-slate-300">
           <Droplets className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
           <div>
-            <div className="text-[10px] text-slate-400">降水確率</div>
+            <div className="text-[10px] text-slate-400">
+              {language === 'en' ? 'Rain' : '降水確率'}
+            </div>
             <div className="font-mono font-bold text-slate-100">{weather.precipitationProbability}%</div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 text-slate-300">
           <Cloud className="w-3.5 h-3.5 text-blue-400 shrink-0" />
           <div>
-            <div className="text-[10px] text-slate-400">湿度</div>
+            <div className="text-[10px] text-slate-400">
+              {language === 'en' ? 'Humidity' : '湿度'}
+            </div>
             <div className="font-mono font-bold text-slate-100">{weather.humidity}%</div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 text-slate-300">
           <Wind className="w-3.5 h-3.5 text-teal-400 shrink-0" />
           <div>
-            <div className="text-[10px] text-slate-400">風速</div>
+            <div className="text-[10px] text-slate-400">
+              {language === 'en' ? 'Wind' : '風速'}
+            </div>
             <div className="font-mono font-bold text-slate-100">{weather.windSpeed}m/s</div>
           </div>
         </div>
