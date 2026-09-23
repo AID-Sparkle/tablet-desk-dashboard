@@ -74,7 +74,7 @@ export const StateC_NewsFocus: React.FC<StateCNewsFocusProps> = ({
       </div>
 
       {/* グリッドカード一覧 */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 overflow-y-auto min-h-0">
         <NewsWidget
           news={filteredNews}
           isLoading={isLoading}

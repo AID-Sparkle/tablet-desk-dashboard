@@ -112,7 +112,7 @@ export const NewsWidget: React.FC<NewsWidgetProps> = ({
 
   // グリッド形式 (State C News Focus 用)
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 h-full overflow-y-auto p-1">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-3 h-full overflow-y-auto p-0.5">
       {displayItems.map((item) => (
         <NewsGridCard key={item.id} item={item} language={language} />
       ))}
@@ -120,7 +120,7 @@ export const NewsWidget: React.FC<NewsWidgetProps> = ({
   );
 };
 
-// コンパクトリスト内アイテム
+// コンパクトリスト内アイテム (State A 用)
 const NewsListItem: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
   item,
   language,
@@ -132,11 +132,11 @@ const NewsListItem: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
       href={item.link}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-2.5 py-2 px-1.5 -mx-1.5 rounded-xl hover:bg-white/5 transition-colors"
+      className="group flex items-center gap-2.5 py-1.5 px-1.5 -mx-1.5 rounded-xl hover:bg-white/5 transition-colors"
     >
       {/* サムネイル画像（小さめ: 40x40px）またはドットアクセント */}
       {item.imageUrl && !imgFailed ? (
-        <div className="w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-slate-800/80 border border-white/10">
+        <div className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-lg overflow-hidden bg-slate-800/80 border border-white/10">
           <img
             src={item.imageUrl}
             alt=""
@@ -163,7 +163,7 @@ const NewsListItem: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
             {timeAgo(item.pubDate, language)}
           </span>
         </div>
-        <p className="text-xs font-medium text-slate-200 group-hover:text-cyan-300 line-clamp-2 transition-colors leading-tight">
+        <p className="text-xs font-medium text-slate-200 group-hover:text-cyan-300 line-clamp-2 transition-colors leading-[1.35]">
           {item.title}
         </p>
       </div>
@@ -173,7 +173,7 @@ const NewsListItem: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
   );
 };
 
-// グリッド内カード (State C 用: 画像小さめ・タイトルがしっかり入る設計)
+// グリッド内カード (State C 用: サムネイルとテキストの横並びスリム設計でタイトル見切れゼロ)
 const NewsGridCard: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
   item,
   language,
@@ -185,39 +185,42 @@ const NewsGridCard: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
       href={item.link}
       target="_blank"
       rel="noopener noreferrer"
-      className="liquid-glass group rounded-2xl overflow-hidden flex flex-col justify-between border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all p-3.5 h-full"
+      className="liquid-glass group rounded-2xl overflow-hidden flex items-center gap-3 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all p-2.5 sm:p-3 h-full min-h-[88px]"
     >
-      <div className="flex-1 min-h-0">
-        {/* 画像エリア (高さを h-24 に抑えてコンパクト化) */}
-        {item.imageUrl && !imgFailed ? (
-          <div className="w-full h-24 rounded-xl overflow-hidden bg-slate-900/60 mb-2.5 border border-white/10">
-            <img
-              src={item.imageUrl}
-              alt=""
-              onError={() => setImgFailed(true)}
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-            />
-          </div>
-        ) : (
-          <div className="w-full h-1.5 rounded-full bg-gradient-to-r from-cyan-400/50 via-blue-500/50 to-transparent mb-2.5" />
-        )}
+      {/* サムネイル画像 (左側、角丸、しっかり収まる幅・高さ) */}
+      {item.imageUrl && !imgFailed ? (
+        <div className="relative w-24 sm:w-28 h-full min-h-[68px] max-h-[82px] rounded-xl overflow-hidden bg-slate-900/60 shrink-0 border border-white/10">
+          <img
+            src={item.imageUrl}
+            alt=""
+            onError={() => setImgFailed(true)}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+          />
+        </div>
+      ) : (
+        <div className="w-12 h-full min-h-[68px] rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
+          <Newspaper className="w-5 h-5 opacity-70" />
+        </div>
+      )}
 
-        <div className="flex items-center justify-between gap-1.5 mb-1.5">
+      {/* 右側テキストエリア: バッジ、時間、記事タイトル */}
+      <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
+        <div className="flex items-center gap-2 mb-1 shrink-0">
           <span
-            className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${getSourceBadgeStyle(
+            className={`text-[9px] sm:text-[10px] font-semibold px-2 py-0.5 rounded-md border shrink-0 ${getSourceBadgeStyle(
               item.sourceName
             )}`}
           >
             {item.sourceName}
           </span>
-          <span className="text-[11px] text-slate-400 font-mono flex items-center gap-1">
+          <span className="text-[10px] sm:text-[11px] text-slate-400 font-mono flex items-center gap-1 shrink-0">
             <Clock className="w-2.5 h-2.5" />
             {timeAgo(item.pubDate, language)}
           </span>
         </div>
 
-        {/* 記事タイトル (枠内にしっかり収まる2行表示) */}
-        <h4 className="text-xs sm:text-sm font-bold text-slate-100 group-hover:text-cyan-300 line-clamp-2 leading-snug transition-colors">
+        {/* 記事タイトル: 1行目は絶対に文字の下が見切れず、2行目も美しく表示 */}
+        <h4 className="text-xs sm:text-[13px] font-bold text-slate-100 group-hover:text-cyan-300 line-clamp-2 leading-[1.35] transition-colors break-words">
           {item.title}
         </h4>
       </div>
