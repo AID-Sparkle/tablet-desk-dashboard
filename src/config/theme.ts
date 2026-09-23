@@ -81,13 +81,14 @@ export const THEME_COLORS: Record<ThemeColorId, ThemeColorConfig> = {
   },
 };
 
-export type BackgroundStyleId = 'orbs' | 'nature' | 'city' | 'minimal' | 'custom';
+export type BackgroundStyleId = 'orbs' | 'nature' | 'city' | 'minimal' | 'video' | 'custom';
 
 export interface BackgroundPreset {
   id: BackgroundStyleId;
   name: string;
   nameJa: string;
   url?: string;
+  isVideo?: boolean;
   previewGradient: string;
 }
 
@@ -120,9 +121,33 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     previewGradient: 'from-slate-900 via-zinc-900 to-black',
   },
   {
+    id: 'video',
+    name: 'Deep Space Loop (MP4)',
+    nameJa: '宇宙・星雲ループ (動画 MP4)',
+    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    isVideo: true,
+    previewGradient: 'from-indigo-950 via-purple-950 to-black',
+  },
+  {
     id: 'custom',
-    name: 'Custom Wallpaper URL',
-    nameJa: 'PC壁紙 / カスタムURL',
+    name: 'Custom Wallpaper (MP4 / Image)',
+    nameJa: 'PC壁紙 / MP4動画 / カスタムURL',
     previewGradient: 'from-slate-800 to-slate-950',
   },
 ];
+
+/**
+ * URLまたはプリセットが動画ファイル（MP4/WebM等）かどうか判定
+ */
+export const isVideoSource = (url?: string, preset?: BackgroundPreset): boolean => {
+  if (preset?.isVideo) return true;
+  if (!url) return false;
+  const clean = url.split('?')[0].toLowerCase();
+  return (
+    clean.endsWith('.mp4') ||
+    clean.endsWith('.webm') ||
+    clean.endsWith('.mov') ||
+    clean.endsWith('.m4v') ||
+    clean.endsWith('.ogg')
+  );
+};

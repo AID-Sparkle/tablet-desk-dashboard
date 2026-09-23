@@ -24,6 +24,7 @@ import {
   Palette,
   Image as ImageIcon,
   Sparkles,
+  Film,
 } from 'lucide-react';
 import { PixelShifter } from '@/components/PixelShifter';
 import { StateA_Dashboard } from '@/components/StateA_Dashboard';
@@ -36,6 +37,7 @@ import {
   ThemeColorId,
   BACKGROUND_PRESETS,
   BackgroundStyleId,
+  isVideoSource,
 } from '@/config/theme';
 import {
   ViewMode,
@@ -465,18 +467,30 @@ export default function DashboardPage() {
   return (
     <main className="relative h-screen w-screen bg-[#060810] text-slate-100 overflow-hidden flex flex-col justify-between select-none">
       {/* ========================================================================
-          背景: 壁紙画像 (Unsplash/カスタム) + 遮光オーバーレイ + 有機的アンビエントオーブ
+          背景: 壁紙画像 / MP4動画ループ (Unsplash/カスタム) + 遮光オーバーレイ + 有機的アンビエントオーブ
       ======================================================================== */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        {/* 背景画像レイヤー */}
-        {activeWallpaperUrl && (
+        {/* 動画壁紙レイヤー (MP4 / WebM ループ再生) */}
+        {activeWallpaperUrl && isVideoSource(activeWallpaperUrl, activeBgPreset) ? (
+          <video
+            key={activeWallpaperUrl}
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 scale-105"
+          >
+            <source src={activeWallpaperUrl} type="video/mp4" />
+          </video>
+        ) : activeWallpaperUrl ? (
+          /* 静止画壁紙レイヤー (Unsplash / カスタム画像) */
           <div
             className="absolute inset-0 bg-cover bg-center transition-all duration-1000 scale-105"
             style={{ backgroundImage: `url(${activeWallpaperUrl})` }}
           />
-        )}
+        ) : null}
 
-        {/* 遮光オーバーレイ (背景写真がある場合は暗さを重ねて前面テキストの可読性を確保) */}
+        {/* 遮光オーバーレイ (背景写真・動画がある場合は暗さを重ねて前面テキストの可読性を確保) */}
         {activeWallpaperUrl && (
           <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] transition-all duration-1000" />
         )}
@@ -559,7 +573,7 @@ export default function DashboardPage() {
       ======================================================================== */}
       <footer className="relative z-30 h-[62px] liquid-glass border-x-0 border-b-0 border-t border-white/10 px-3 sm:px-6 flex items-center justify-between shrink-0">
         {/* 左側: 再生中Spotifyミニプレイヤー または ミニ時計＆天気ピル */}
-        <div className="flex items-center gap-2.5 min-w-0 max-w-[50%]">
+        <div className="flex items-center gap-2.5 min-w-0 max-w-[calc(50%-180px)] z-10">
           {/* Spotify 再生中ミニプレイヤー (State B 以外のときに表示) */}
           {spotifyTrack && viewMode !== 'B' && (
             <div
@@ -693,8 +707,8 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* 中央: 画面切り替えタブ (英語 / 日本語対応 & テーマカラー連動) */}
-        <div className="flex items-center gap-1.5 liquid-glass-pill p-1 rounded-2xl shadow-lg">
+        {/* 中央: 画面切り替えタブ (完全中央固定: 左右要素の幅変化に影響されない) */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 liquid-glass-pill p-1 rounded-2xl shadow-lg z-20">
           <button
             id="tab-main"
             onClick={() => handleManualSwitch('A')}
@@ -744,7 +758,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 右側: 自動ローテーショントグル & 設定 */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 z-10">
           {/* 自動回転 一時停止/再開 (設定秒数にリアルタイム連動) */}
           <button
             onClick={() => setIsAutoRotationActive(!isAutoRotationActive)}
@@ -1005,7 +1019,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* 4. 背景壁紙スタイル (Unsplash / PC壁紙 / オーブ) */}
+              {/* 4. 背景壁紙スタイル (Unsplash / PC壁紙 / MP4動画 / オーブ) */}
               <div className="p-4 rounded-2xl liquid-glass-subtle">
                 <div className="flex items-center gap-3 mb-3">
                   <div className="p-2 rounded-xl liquid-glass-pill" style={{ color: 'var(--theme-accent, #22d3ee)' }}>
@@ -1013,10 +1027,10 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-white block">
-                      背景スタイル (壁紙設定)
+                      背景スタイル (壁紙・MP4動画ループ)
                     </span>
                     <span className="text-xs text-slate-400">
-                      Unsplash高精細写真やPC壁紙で、すりガラスの立体感をさらに向上
+                      Unsplash写真やMP4動画ループで、すりガラスの立体感をさらに向上
                     </span>
                   </div>
                 </div>
@@ -1043,12 +1057,21 @@ export default function DashboardPage() {
                             : {}
                         }
                       >
-                        <span className="text-xs">
-                          {preset.nameJa}
-                        </span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          {preset.isVideo ? (
+                            <Film className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          ) : (
+                            <span
+                              className={`w-3.5 h-3.5 rounded-full bg-gradient-to-br ${preset.previewGradient} shrink-0 border border-white/20`}
+                            />
+                          )}
+                          <span className="text-xs truncate">
+                            {preset.nameJa}
+                          </span>
+                        </div>
                         {isSelected && (
                           <span
-                            className="w-2 h-2 rounded-full shadow-sm"
+                            className="w-2 h-2 rounded-full shadow-sm shrink-0"
                             style={{ backgroundColor: 'var(--theme-accent, #22d3ee)' }}
                           />
                         )}
@@ -1059,20 +1082,37 @@ export default function DashboardPage() {
 
                 {/* カスタムURL入力欄 (custom選択時) */}
                 {backgroundStyle === 'custom' && (
-                  <div className="mt-3 pt-3 border-t border-white/10">
-                    <label className="text-xs text-slate-300 block mb-1.5">
-                      カスタム壁紙画像のURL (PC壁紙等):
+                  <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
+                    <label className="text-xs text-slate-300 block font-medium">
+                      カスタム壁紙（MP4動画 / 画像）のURLまたはパス:
                     </label>
-                    <input
-                      type="url"
-                      value={customWallpaperUrl}
-                      onChange={(e) => handleUpdateCustomWallpaper(e.target.value)}
-                      placeholder="https://example.com/wallpaper.jpg"
-                      className="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
-                    />
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      画像の直リンクURL（jpg, png, webp）を入力してください。前面文字が読めるよう自動で適度に遮光されます。
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={customWallpaperUrl}
+                        onChange={(e) => handleUpdateCustomWallpaper(e.target.value)}
+                        placeholder="/my-wallpaper.mp4 または https://.../wallpaper.mp4"
+                        className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
+                      />
+                      {customWallpaperUrl && (
+                        <button
+                          onClick={() => handleUpdateCustomWallpaper('')}
+                          className="px-2.5 py-2 rounded-xl text-xs bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all shrink-0"
+                        >
+                          クリア
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/20 text-[11px] text-slate-300 space-y-1">
+                      <p className="font-semibold text-cyan-300 flex items-center gap-1.5">
+                        <Film className="w-3.5 h-3.5" />
+                        PCのWallpaper Engine録画動画（MP4）を使う方法:
+                      </p>
+                      <p className="text-slate-400 leading-relaxed">
+                        録画したMP4ファイルを、プロジェクトの <code className="text-cyan-200 bg-white/10 px-1 py-0.5 rounded font-mono">public/</code> フォルダ（例: <code className="text-cyan-200 bg-white/10 px-1 py-0.5 rounded font-mono">public/my-wallpaper.mp4</code>）に置くだけで、上記入力欄に <code className="text-cyan-200 bg-white/10 px-1 py-0.5 rounded font-mono">/my-wallpaper.mp4</code> と入力すれば自動で超滑らかにループ再生されます！
+                      </p>
+                    </div>
                   </div>
                 )}
               </div>
