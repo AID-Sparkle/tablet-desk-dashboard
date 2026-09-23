@@ -108,9 +108,9 @@ FULLY_KIOSK_PASSWORD=your_password
 ```
 
 ### Spotify Refresh Token の簡単取得手順
-1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) でアプリを作成し、Redirect URI に `http://localhost:3000/api/spotify/callback` を登録します。
+1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) でアプリを作成し、Redirect URI に `http://127.0.0.1:3000/api/spotify/callback` を登録します。（※Spotifyの仕様上 `localhost` は登録不可のため、必ず `127.0.0.1` を使用してください）
 2. Client ID と Client Secret を `.env.local` に記載します。
-3. アプリ起動後、ブラウザで [http://localhost:3000/api/spotify/login](http://localhost:3000/api/spotify/login) にアクセスしてSpotifyにログインします。
+3. アプリ起動後、ブラウザで [http://127.0.0.1:3000/api/spotify/login](http://127.0.0.1:3000/api/spotify/login) にアクセスしてSpotifyにログインします。
 4. 画面上に表示された `SPOTIFY_REFRESH_TOKEN` をコピーして `.env.local` に貼り付け、サーバーを再起動するだけで完了です。
 
 詳細なセットアップガイドは [`docs/SETUP_GUIDE.md`](docs/SETUP_GUIDE.md) をご覧ください。

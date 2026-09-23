@@ -41,7 +41,8 @@ npm run dev
 2. **「Create app」** をクリック。
    - App name: `Desk Dashboard`（任意）
    - App description: `Xiaomi Pad 5 Console`（任意）
-   - Redirect URIs: `http://localhost:3000/api/spotify/callback` を入力して「Add」
+   - Redirect URIs: `http://127.0.0.1:3000/api/spotify/callback` を入力して「Add」
+     ※Spotifyの仕様上 `localhost` は許可されないため、必ず `127.0.0.1` を使用してください。
      ※Vercel等にデプロイした後は、本番URL（例: `https://your-app.vercel.app/api/spotify/callback`）も追加してください。
    - Which API/SDKs are you planning to use?: **Web API** にチェック
    - 規約に同意して「Save」をクリック。
@@ -54,7 +55,7 @@ npm run dev
 
 #### Refresh Token の超簡単自動取得:
 1. `npm run dev` でアプリを起動。
-2. ブラウザで **`http://localhost:3000/api/spotify/login`** にアクセス。
+2. ブラウザで **`http://127.0.0.1:3000/api/spotify/login`** にアクセス。
 3. Spotifyの同意画面が表示されるので「同意する」をクリック。
 4. 自動的に画面に **`SPOTIFY_REFRESH_TOKEN`** が生成・表示され、ワンクリックでコピーできます！
 5. コピーした値を `.env.local` の `SPOTIFY_REFRESH_TOKEN` に貼り付けて保存し、サーバーを再起動（`Ctrl + C` のあと `npm run dev`）すれば連携完了です。
