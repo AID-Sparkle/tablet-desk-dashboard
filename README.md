@@ -43,8 +43,9 @@ npm run dev
 ```
 
 起動後、タブレットやPCのブラウザから以下を開きます：
-- **ローカルアクセス**: [http://localhost:3000](http://localhost:3000)
-- **タブレットからのアクセス**: `http://<PCのローカルIPアドレス>:3000`
+- **ローカルアクセス**: [http://localhost:3000](http://localhost:3000)（または [http://127.0.0.1:3000](http://127.0.0.1:3000)）
+- **本番環境アクセス（Vercel）**: [https://tablet-desk-dashboard.vercel.app](https://tablet-desk-dashboard.vercel.app)
+- **ローカルIPアクセス（タブレット等）**: `http://<PCのローカルIPアドレス>:3000`
 
 ---
 
@@ -108,7 +109,9 @@ FULLY_KIOSK_PASSWORD=your_password
 ```
 
 ### Spotify Refresh Token の簡単取得手順
-1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) でアプリを作成し、Redirect URI に `http://127.0.0.1:3000/api/spotify/callback` を登録します。（※Spotifyの仕様上 `localhost` は登録不可のため、必ず `127.0.0.1` を使用してください）
+1. [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) でアプリを作成し、Redirect URI に以下を登録します：
+   - ローカル開発用: `http://127.0.0.1:3000/api/spotify/callback`（※Spotifyの仕様上 `localhost` は不可）
+   - Vercel本番環境用: `https://tablet-desk-dashboard.vercel.app/api/spotify/callback`
 2. Client ID と Client Secret を `.env.local` に記載します。
 3. アプリ起動後、ブラウザで [http://127.0.0.1:3000/api/spotify/login](http://127.0.0.1:3000/api/spotify/login) にアクセスしてSpotifyにログインします。
 4. 画面上に表示された `SPOTIFY_REFRESH_TOKEN` をコピーして `.env.local` に貼り付け、サーバーを再起動するだけで完了です。

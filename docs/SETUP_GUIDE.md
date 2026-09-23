@@ -43,7 +43,7 @@ npm run dev
    - App description: `Xiaomi Pad 5 Console`（任意）
    - Redirect URIs: `http://127.0.0.1:3000/api/spotify/callback` を入力して「Add」
      ※Spotifyの仕様上 `localhost` は許可されないため、必ず `127.0.0.1` を使用してください。
-     ※Vercel等にデプロイした後は、本番URL（例: `https://your-app.vercel.app/api/spotify/callback`）も追加してください。
+     ※Vercel本番環境用のURL（`https://tablet-desk-dashboard.vercel.app/api/spotify/callback`）も追加してください。
    - Which API/SDKs are you planning to use?: **Web API** にチェック
    - 規約に同意して「Save」をクリック。
 3. 作成したアプリの **「Settings」** を開く。
@@ -88,11 +88,11 @@ npm run dev
 #### タブレット（MacroDroid）側での給電ルール設定（給電自動化時）:
 - **トリガー 1:** バッテリー残量 80% 以上
   - **アクション:** HTTPリクエスト（POST）
-  - **URL:** `https://[あなたのVercelドメイン]/api/switchbot?state=off`
+  - **URL:** `https://tablet-desk-dashboard.vercel.app/api/switchbot?state=off`
   - **ヘッダー:** `x-api-key: [INTERNAL_SWITCHBOT_KEYに設定した文字列]`
 - **トリガー 2:** バッテリー残量 20% 以下
   - **アクション:** HTTPリクエスト（POST）
-  - **URL:** `https://[あなたのVercelドメイン]/api/switchbot?state=on`
+  - **URL:** `https://tablet-desk-dashboard.vercel.app/api/switchbot?state=on`
   - **ヘッダー:** `x-api-key: [INTERNAL_SWITCHBOT_KEYに設定した文字列]`
 - **ポイント:** 21%〜79%の間は何もしない（状態維持）ため、頻繁なON/OFFが発生せずバッテリーを最適保護できます。
 
