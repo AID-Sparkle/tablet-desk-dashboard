@@ -49,7 +49,7 @@ function getWeatherIcon(code: number, isDay: boolean = true) {
 }
 
 // 時間帯・週間予報用の小さいアイコン
-function getSmallWeatherIcon(code: number) {
+export function getSmallWeatherIcon(code: number) {
   if (code === 0 || code === 1) return <Sun className="w-4 h-4 text-amber-400" />;
   if (code === 2 || code === 3) return <Cloud className="w-4 h-4 text-slate-400" />;
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return <CloudRain className="w-4 h-4 text-cyan-400" />;

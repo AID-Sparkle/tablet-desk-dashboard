@@ -29,6 +29,7 @@ import { PixelShifter } from '@/components/PixelShifter';
 import { StateA_Dashboard } from '@/components/StateA_Dashboard';
 import { StateB_SpotifyFocus } from '@/components/StateB_SpotifyFocus';
 import { StateC_NewsFocus } from '@/components/StateC_NewsFocus';
+import { getSmallWeatherIcon } from '@/components/WeatherWidget';
 import { DASHBOARD_CONFIG } from '@/config/dashboard';
 import {
   THEME_COLORS,
@@ -72,6 +73,29 @@ export default function DashboardPage() {
   // 新機能: 背景スタイル (デフォルト: orbs)
   const [backgroundStyle, setBackgroundStyle] = useState<BackgroundStyleId>('orbs');
   const [customWallpaperUrl, setCustomWallpaperUrl] = useState<string>('');
+
+  // 画面下部ミニ時計用
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
+
+  useEffect(() => {
+    setCurrentTime(new Date());
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatMiniTime = () => {
+    if (!currentTime) return '--:--';
+    const hours = currentTime.getHours();
+    const minutes = currentTime.getMinutes().toString().padStart(2, '0');
+    if (timeFormat === '12h') {
+      const isPM = hours >= 12;
+      const h12 = (hours % 12 || 12).toString().padStart(2, '0');
+      return `${h12}:${minutes} ${isPM ? 'PM' : 'AM'}`;
+    }
+    return `${hours.toString().padStart(2, '0')}:${minutes}`;
+  };
 
   // ----------------------------------------------------------------------------
   // データステート
@@ -533,14 +557,14 @@ export default function DashboardPage() {
       {/* ========================================================================
           画面下部: iOSリキッドガラス ナビゲーション & 再生中ミニプレイヤーバー (固定高さ 62px)
       ======================================================================== */}
-      <footer className="relative z-30 h-[62px] liquid-glass border-x-0 border-b-0 border-t border-white/10 px-4 sm:px-6 flex items-center justify-between shrink-0">
-        {/* 左側: 再生中Spotifyミニプレイヤー (State B 以外のときに表示) またはステータス */}
-        <div className="flex items-center gap-3 min-w-0 max-w-[45%]">
-          {spotifyTrack && viewMode !== 'B' ? (
-            /* Spotify 再生中ミニプレイヤー (タップでState Bへ遷移) */
+      <footer className="relative z-30 h-[62px] liquid-glass border-x-0 border-b-0 border-t border-white/10 px-3 sm:px-6 flex items-center justify-between shrink-0">
+        {/* 左側: 再生中Spotifyミニプレイヤー または ミニ時計＆天気ピル */}
+        <div className="flex items-center gap-2.5 min-w-0 max-w-[50%]">
+          {/* Spotify 再生中ミニプレイヤー (State B 以外のときに表示) */}
+          {spotifyTrack && viewMode !== 'B' && (
             <div
               onClick={() => handleManualSwitch('B')}
-              className="flex items-center gap-2.5 p-1.5 pr-3 rounded-2xl liquid-glass-pill hover:bg-white/10 cursor-pointer transition-all max-w-full group"
+              className="flex items-center gap-2 p-1.5 pr-2.5 rounded-2xl liquid-glass-pill hover:bg-white/10 cursor-pointer transition-all max-w-[200px] sm:max-w-[260px] group shrink-0"
               title={language === 'en' ? 'Click to open Spotify full view' : 'クリックでSpotify大画面に切り替え'}
             >
               {/* サムネイル */}
@@ -605,9 +629,40 @@ export default function DashboardPage() {
                 <SkipForward className="w-3.5 h-3.5" />
               </button>
             </div>
-          ) : (
-            /* 非再生時のデスク情報ステータス */
-            <div className="flex items-center gap-3">
+          )}
+
+          {/* 【新機能】Spotify (State B) や NEWS (State C) 画面用: 下部ミニ時間＆天気・気温表示 */}
+          {(viewMode === 'B' || viewMode === 'C') && (
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl liquid-glass-pill border border-white/10 shrink-0 shadow-sm animate-fadeIn">
+              {/* 時計 (12h/24h対応) */}
+              <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-white">
+                <Clock className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent, #22d3ee)' }} />
+                <span>{formatMiniTime()}</span>
+              </div>
+
+              {/* 区切りバー */}
+              <span className="w-px h-3.5 bg-white/20" />
+
+              {/* 天気アイコン & 気温 */}
+              {weather ? (
+                <div className="flex items-center gap-1.5 text-xs">
+                  {getSmallWeatherIcon(weather.weatherCode)}
+                  <span className="font-semibold text-slate-100 tabular-nums">
+                    {weather.currentTemp.toFixed(1)}°C
+                  </span>
+                  <span className="text-[10px] text-slate-400 hidden lg:inline">
+                    {weather.cityName}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-[10px] text-slate-400">--°C</span>
+              )}
+            </div>
+          )}
+
+          {/* State A かつ Spotify非再生時: ネットワーク・ピクセルシフト情報 */}
+          {viewMode === 'A' && !spotifyTrack && (
+            <div className="flex items-center gap-2.5">
               <div className="flex items-center gap-2 text-xs text-slate-300 liquid-glass-pill px-3 py-1 rounded-full">
                 {isOnline ? (
                   <>
@@ -624,7 +679,6 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* 焼き付き防止インジケーター */}
               <div
                 className="hidden lg:flex items-center gap-1.5 text-[10px] text-slate-300 liquid-glass-pill px-2.5 py-1 rounded-full"
                 title={`Pixel Shift: x=${pixelOffset.x}px, y=${pixelOffset.y}px`}
@@ -696,15 +750,28 @@ export default function DashboardPage() {
             onClick={() => setIsAutoRotationActive(!isAutoRotationActive)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               isAutoRotationActive
-                ? 'liquid-glass-pill text-cyan-300 border-cyan-400/30'
+                ? 'liquid-glass-pill'
                 : 'bg-amber-500/20 text-amber-200 border border-amber-400/30'
             }`}
+            style={
+              isAutoRotationActive
+                ? {
+                    color: 'var(--theme-accent, #22d3ee)',
+                    borderColor: 'var(--theme-accent-border, rgba(34, 211, 238, 0.35))',
+                  }
+                : {}
+            }
             title={isAutoRotationActive ? 'Pause auto-rotation' : 'Resume auto-rotation'}
           >
             {isAutoRotationActive ? (
               <>
-                <PauseCircle className="w-3.5 h-3.5 text-cyan-400" />
-                <span className="hidden sm:inline">{language === 'en' ? '30s Auto' : '30s 自動切替'}</span>
+                <PauseCircle
+                  className="w-3.5 h-3.5"
+                  style={{ color: 'var(--theme-accent, #22d3ee)' }}
+                />
+                <span className="hidden sm:inline">
+                  {language === 'en' ? `${autoRotationInterval}s Auto` : `${autoRotationInterval}s 自動切換`}
+                </span>
               </>
             ) : (
               <>
@@ -718,7 +785,7 @@ export default function DashboardPage() {
           <button
             onClick={() => setShowSettingsModal(true)}
             className="p-2 rounded-xl liquid-glass-pill text-slate-300 hover:text-white hover:bg-white/10 transition-colors"
-            title={language === 'en' ? 'Settings & Preferences' : '設定・カスタマイズ'}
+            title="設定・カスタマイズ"
           >
             <Settings className="w-4 h-4" />
           </button>
@@ -726,18 +793,19 @@ export default function DashboardPage() {
       </footer>
 
       {/* ========================================================================
-          設定 & カスタマイズモーダル (iOSリキッドガラス調)
+          設定 & カスタマイズモーダル (言語設定に関わらず常に完全日本語で分かりやすく表示)
       ======================================================================== */}
       {showSettingsModal && (
         <div className="fixed inset-0 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 z-50 animate-fadeIn">
           <div className="liquid-glass max-w-2xl w-full rounded-3xl p-6 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col border border-white/15">
+            {/* モーダルヘッダー */}
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-2xl liquid-glass-pill text-cyan-400">
+                <div className="p-2 rounded-2xl liquid-glass-pill" style={{ color: 'var(--theme-accent, #22d3ee)' }}>
                   <Settings className="w-5 h-5" />
                 </div>
                 <h3 className="text-lg font-bold text-white">
-                  {language === 'en' ? 'Dashboard Settings' : 'ダッシュボード設定'}
+                  ダッシュボード設定
                 </h3>
               </div>
               <button
@@ -748,6 +816,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
+            {/* モーダル本体 (常に日本語表示) */}
             <div className="flex-1 overflow-y-auto py-4 space-y-4 text-sm text-slate-200 pr-1">
               {/* 1. 自動切り替わり秒数の変更スライダー */}
               <div className="p-4 rounded-2xl liquid-glass-subtle">
@@ -758,12 +827,10 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <span className="font-semibold text-white block">
-                        {language === 'en' ? 'Auto-Rotation Interval' : '画面自動切り替え秒数'}
+                        画面自動切り替え秒数
                       </span>
                       <span className="text-xs text-slate-400">
-                        {language === 'en'
-                          ? 'Duration before switching views (A ⇄ B ⇄ C)'
-                          : '各画面（メイン・Spotify・ニュース）の滞在秒数'}
+                        各画面（メイン・Spotify・ニュース）の滞在秒数
                       </span>
                     </div>
                   </div>
@@ -771,12 +838,12 @@ export default function DashboardPage() {
                     className="font-mono text-sm font-bold px-3 py-1 rounded-xl liquid-glass-pill"
                     style={{ color: 'var(--theme-accent, #22d3ee)' }}
                   >
-                    {autoRotationInterval} {language === 'en' ? 'sec' : '秒'}
+                    {autoRotationInterval} 秒
                   </span>
                 </div>
 
                 <div className="mt-3 flex items-center gap-3">
-                  <span className="text-xs text-slate-400 font-mono">10s</span>
+                  <span className="text-xs text-slate-400 font-mono">10秒</span>
                   <input
                     type="range"
                     min={10}
@@ -784,15 +851,15 @@ export default function DashboardPage() {
                     step={5}
                     value={autoRotationInterval}
                     onChange={(e) => handleUpdateInterval(parseInt(e.target.value, 10))}
-                    className="flex-1 accent-cyan-400 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none"
+                    className="flex-1 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none"
                     style={{ accentColor: 'var(--theme-accent, #22d3ee)' }}
                   />
-                  <span className="text-xs text-slate-400 font-mono">120s</span>
+                  <span className="text-xs text-slate-400 font-mono">120秒</span>
                 </div>
 
                 {/* クイック選択プリセット */}
                 <div className="flex items-center gap-2 mt-3 pt-2 border-t border-white/5">
-                  <span className="text-[11px] text-slate-400">{language === 'en' ? 'Presets:' : 'プリセット:'}</span>
+                  <span className="text-[11px] text-slate-400">プリセット:</span>
                   {[15, 30, 45, 60, 90].map((sec) => (
                     <button
                       key={sec}
@@ -808,7 +875,7 @@ export default function DashboardPage() {
                           : {}
                       }
                     >
-                      {sec}s
+                      {sec}秒
                     </button>
                   ))}
                 </div>
@@ -823,12 +890,10 @@ export default function DashboardPage() {
                     </div>
                     <div>
                       <span className="font-semibold text-white block">
-                        {language === 'en' ? 'Liquid Glass Transparency' : 'リキッドガラスの透過率'}
+                        リキッドガラスの透過率
                       </span>
                       <span className="text-xs text-slate-400">
-                        {language === 'en'
-                          ? 'Glass panel background opacity (lower = more transparent)'
-                          : 'すりガラスの濃さ（低いほど背景が透け、高いほど文字重視）'}
+                        すりガラスの濃さ（低いほど背景が透け、高いほど文字重視）
                       </span>
                     </div>
                   </div>
@@ -841,7 +906,7 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="mt-3 flex items-center gap-3">
-                  <span className="text-xs text-slate-400 font-mono">20% ({language === 'en' ? 'Clear' : '透明'})</span>
+                  <span className="text-xs text-slate-400 font-mono">20% (透明)</span>
                   <input
                     type="range"
                     min={20}
@@ -852,16 +917,16 @@ export default function DashboardPage() {
                     className="flex-1 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none"
                     style={{ accentColor: 'var(--theme-accent, #22d3ee)' }}
                   />
-                  <span className="text-xs text-slate-400 font-mono">85% ({language === 'en' ? 'Solid' : '濃密'})</span>
+                  <span className="text-xs text-slate-400 font-mono">85% (濃密)</span>
                 </div>
 
                 {/* クイック選択プリセット */}
                 <div className="flex items-center gap-2 mt-3 pt-2 border-t border-white/5">
-                  <span className="text-[11px] text-slate-400">{language === 'en' ? 'Style:' : 'スタイル:'}</span>
+                  <span className="text-[11px] text-slate-400">スタイル:</span>
                   {[
-                    { label: language === 'en' ? '30% Transparent' : '30% クリア', val: 30 },
-                    { label: language === 'en' ? '52% Balanced' : '52% 標準', val: 52 },
-                    { label: language === 'en' ? '70% High Contrast' : '70% くっきり', val: 70 },
+                    { label: '30% クリア', val: 30 },
+                    { label: '52% 標準', val: 52 },
+                    { label: '70% くっきり', val: 70 },
                   ].map((p) => (
                     <button
                       key={p.val}
@@ -891,12 +956,10 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-white block">
-                      {language === 'en' ? 'Theme Accent Color' : 'アプリのテーマカラー'}
+                      アプリのテーマカラー
                     </span>
                     <span className="text-xs text-slate-400">
-                      {language === 'en'
-                        ? 'Select accent color for clocks, indicators & buttons'
-                        : '時計、秒針、インジケーター等のアクセントカラーを変更'}
+                      時計、秒針、インジケーター等のアクセントカラーを変更
                     </span>
                   </div>
                 </div>
@@ -933,7 +996,7 @@ export default function DashboardPage() {
                         />
                         <div className="min-w-0 flex-1">
                           <span className="text-xs block truncate">
-                            {language === 'en' ? theme.name : theme.nameJa}
+                            {theme.nameJa}
                           </span>
                         </div>
                       </button>
@@ -950,12 +1013,10 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-white block">
-                      {language === 'en' ? 'Background Wallpaper Style' : '背景スタイル (壁紙設定)'}
+                      背景スタイル (壁紙設定)
                     </span>
                     <span className="text-xs text-slate-400">
-                      {language === 'en'
-                        ? 'Enhance frosted glass with Unsplash photography or custom wallpaper'
-                        : 'Unsplash高精細写真やPC壁紙で、すりガラスの立体感をさらに向上'}
+                      Unsplash高精細写真やPC壁紙で、すりガラスの立体感をさらに向上
                     </span>
                   </div>
                 </div>
@@ -983,7 +1044,7 @@ export default function DashboardPage() {
                         }
                       >
                         <span className="text-xs">
-                          {language === 'en' ? preset.name : preset.nameJa}
+                          {preset.nameJa}
                         </span>
                         {isSelected && (
                           <span
@@ -1000,7 +1061,7 @@ export default function DashboardPage() {
                 {backgroundStyle === 'custom' && (
                   <div className="mt-3 pt-3 border-t border-white/10">
                     <label className="text-xs text-slate-300 block mb-1.5">
-                      {language === 'en' ? 'Custom Wallpaper Image URL:' : 'カスタム壁紙画像のURL (PC壁紙等):'}
+                      カスタム壁紙画像のURL (PC壁紙等):
                     </label>
                     <input
                       type="url"
@@ -1010,9 +1071,7 @@ export default function DashboardPage() {
                       className="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
                     />
                     <p className="text-[11px] text-slate-400 mt-1">
-                      {language === 'en'
-                        ? 'Direct image URL (jpg, png, webp). It will be dimmed for readability.'
-                        : '画像の直リンクURLを入力してください。前面文字が読めるよう自動で適度に遮光されます。'}
+                      画像の直リンクURL（jpg, png, webp）を入力してください。前面文字が読めるよう自動で適度に遮光されます。
                     </p>
                   </div>
                 )}
@@ -1026,10 +1085,10 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-white block">
-                      {language === 'en' ? 'Time Format' : '時刻表示形式'}
+                      時刻表示形式
                     </span>
                     <span className="text-xs text-slate-400">
-                      {language === 'en' ? 'Toggle 12-hour (AM/PM) or 24-hour' : '12時間（AM/PM）または24時間表示'}
+                      12時間（AM/PM）または24時間表示
                     </span>
                   </div>
                 </div>
@@ -1048,7 +1107,7 @@ export default function DashboardPage() {
                         : {}
                     }
                   >
-                    12h
+                    12時間
                   </button>
                   <button
                     onClick={() => handleToggleTimeFormat('24h')}
@@ -1063,7 +1122,7 @@ export default function DashboardPage() {
                         : {}
                     }
                   >
-                    24h
+                    24時間
                   </button>
                 </div>
               </div>
@@ -1076,10 +1135,10 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-white block">
-                      {language === 'en' ? 'Interface Language' : '表示言語'}
+                      表示言語 (メインUI)
                     </span>
                     <span className="text-xs text-slate-400">
-                      {language === 'en' ? 'English (articles remain Japanese) or Japanese' : 'UI表記の言語切り替え'}
+                      メイン画面のタブや日付表記の言語を切り替えます
                     </span>
                   </div>
                 </div>
@@ -1108,7 +1167,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* 7. 天気の地点変更 */}
+              {/* 7. 天気の地点設定 */}
               <div className="p-4 rounded-2xl liquid-glass-subtle">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 rounded-xl liquid-glass-pill text-amber-400">
@@ -1116,10 +1175,10 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <span className="font-semibold text-white block">
-                      {language === 'en' ? 'Weather Location' : '天気の地点設定'}
+                      天気の地点設定
                     </span>
                     <span className="text-xs text-slate-400">
-                      {language === 'en' ? 'Enter city name (e.g. 宇都宮, Tokyo, Osaka)' : '地名を入力するだけで即座に天気が切り替わります'}
+                      地名を入力するだけで即座に天気が切り替わります
                     </span>
                   </div>
                 </div>
@@ -1129,7 +1188,7 @@ export default function DashboardPage() {
                     type="text"
                     value={cityInput}
                     onChange={(e) => setCityInput(e.target.value)}
-                    placeholder={language === 'en' ? 'City name...' : '地名を入力...'}
+                    placeholder="地名を入力 (例: 宇都宮, Tokyo, Osaka)..."
                     className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
                     style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}
                     onKeyDown={(e) => {
@@ -1143,29 +1202,27 @@ export default function DashboardPage() {
                     style={{ backgroundColor: 'var(--theme-accent, #22d3ee)' }}
                   >
                     <Search className="w-3.5 h-3.5" />
-                    <span>{isSearchingCity ? '...' : language === 'en' ? 'Apply' : '適用'}</span>
+                    <span>{isSearchingCity ? '...' : '適用'}</span>
                   </button>
                 </div>
                 {citySearchError && (
                   <p className="text-xs text-rose-400 mt-1.5">{citySearchError}</p>
                 )}
                 <p className="text-[11px] text-slate-400 mt-2">
-                  {language === 'en' ? 'Current:' : '現在の地点:'} <strong className="text-slate-200">{currentCityName}</strong>
+                  現在の地点: <strong className="text-slate-200">{currentCityName}</strong>
                 </p>
               </div>
 
               {/* 8. Spotify連携情報 */}
               <div className="p-4 rounded-2xl liquid-glass-subtle">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="font-semibold text-white">🎵 Spotify</span>
+                  <span className="font-semibold text-white">🎵 Spotify 連携情報</span>
                   <span className="text-xs font-mono text-emerald-400 font-medium">
-                    Status: {spotifyStatus}
+                    ステータス: {spotifyStatus}
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 mb-3">
-                  {language === 'en'
-                    ? 'Connected. Now Playing track is displayed in bottom bar & full view.'
-                    : '連携完了済みです。曲を再生すると自動表示されます。'}
+                  連携完了済みです。曲を再生すると自動表示されます。
                 </p>
                 <a
                   href="/api/spotify/login"
@@ -1173,19 +1230,20 @@ export default function DashboardPage() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all"
                 >
-                  <span>{language === 'en' ? 'Re-authenticate' : 'トークン再取得'}</span>
+                  <span>トークン再取得</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
               </div>
             </div>
 
+            {/* モーダルフッター */}
             <div className="pt-4 border-t border-white/10 flex justify-end shrink-0">
               <button
                 onClick={() => setShowSettingsModal(false)}
                 className="px-5 py-2 rounded-xl text-slate-950 text-xs font-bold transition-all shadow-md"
                 style={{ backgroundColor: 'var(--theme-accent, #22d3ee)' }}
               >
-                {language === 'en' ? 'Close' : '閉じる'}
+                閉じる
               </button>
             </div>
           </div>
