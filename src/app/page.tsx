@@ -20,12 +20,22 @@ import {
   Clock,
   Languages,
   Search,
+  Sliders,
+  Palette,
+  Image as ImageIcon,
+  Sparkles,
 } from 'lucide-react';
 import { PixelShifter } from '@/components/PixelShifter';
 import { StateA_Dashboard } from '@/components/StateA_Dashboard';
 import { StateB_SpotifyFocus } from '@/components/StateB_SpotifyFocus';
 import { StateC_NewsFocus } from '@/components/StateC_NewsFocus';
 import { DASHBOARD_CONFIG } from '@/config/dashboard';
+import {
+  THEME_COLORS,
+  ThemeColorId,
+  BACKGROUND_PRESETS,
+  BackgroundStyleId,
+} from '@/config/theme';
 import {
   ViewMode,
   WeatherData,
@@ -52,6 +62,16 @@ export default function DashboardPage() {
   const [currentCityName, setCurrentCityName] = useState<string>('宇都宮');
   const [citySearchError, setCitySearchError] = useState<string | null>(null);
   const [isSearchingCity, setIsSearchingCity] = useState<boolean>(false);
+
+  // 新機能: 自動切り替わり秒数 (デフォルト: 30秒)
+  const [autoRotationInterval, setAutoRotationInterval] = useState<number>(30);
+  // 新機能: リキッドガラス透過率 / 不透明度 (デフォルト: 52%)
+  const [glassOpacity, setGlassOpacity] = useState<number>(52);
+  // 新機能: テーマカラー (デフォルト: cyan)
+  const [themeColor, setThemeColor] = useState<ThemeColorId>('cyan');
+  // 新機能: 背景スタイル (デフォルト: orbs)
+  const [backgroundStyle, setBackgroundStyle] = useState<BackgroundStyleId>('orbs');
+  const [customWallpaperUrl, setCustomWallpaperUrl] = useState<string>('');
 
   // ----------------------------------------------------------------------------
   // データステート
@@ -95,10 +115,53 @@ export default function DashboardPage() {
         setCityInput(savedCity);
         setCurrentCityName(savedCity);
       }
+      const savedInterval = localStorage.getItem('desk_rotation_interval');
+      if (savedInterval) {
+        const val = parseInt(savedInterval, 10);
+        if (!isNaN(val) && val >= 5 && val <= 300) {
+          setAutoRotationInterval(val);
+        }
+      }
+      const savedOpacity = localStorage.getItem('desk_glass_opacity');
+      if (savedOpacity) {
+        const val = parseInt(savedOpacity, 10);
+        if (!isNaN(val) && val >= 10 && val <= 95) {
+          setGlassOpacity(val);
+        }
+      }
+      const savedTheme = localStorage.getItem('desk_theme_color');
+      if (savedTheme && savedTheme in THEME_COLORS) {
+        setThemeColor(savedTheme as ThemeColorId);
+      }
+      const savedBg = localStorage.getItem('desk_background_style');
+      if (savedBg) {
+        setBackgroundStyle(savedBg as BackgroundStyleId);
+      }
+      const savedCustomBg = localStorage.getItem('desk_custom_wallpaper');
+      if (savedCustomBg) {
+        setCustomWallpaperUrl(savedCustomBg);
+      }
     } catch {
       // ignore
     }
   }, []);
+
+  // ----------------------------------------------------------------------------
+  // 0.1 CSS変数のリアルタイム適用 (リキッドガラス透過率 & テーマカラー)
+  // ----------------------------------------------------------------------------
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const root = document.documentElement;
+    // リキッドガラス不透明度 (0.15 〜 0.90)
+    root.style.setProperty('--glass-opacity', (glassOpacity / 100).toFixed(2));
+
+    // テーマカラー
+    const config = THEME_COLORS[themeColor] || THEME_COLORS.cyan;
+    root.style.setProperty('--theme-accent', config.accent);
+    root.style.setProperty('--theme-accent-dim', config.accentDim);
+    root.style.setProperty('--theme-accent-border', config.accentBorder);
+    root.style.setProperty('--theme-accent-glow', config.accentGlow);
+  }, [glassOpacity, themeColor]);
 
   // ----------------------------------------------------------------------------
   // 1. オフライン / オンライン監視
@@ -280,7 +343,7 @@ export default function DashboardPage() {
   }, [spotifyTrack?.isPlaying, fetchSpotifyNowPlaying]);
 
   // ----------------------------------------------------------------------------
-  // 5. 画面自動ローテーション (30秒きっちり維持するタイマー管理)
+  // 5. 画面自動ローテーション (設定秒数きっちり維持するタイマー管理)
   // ----------------------------------------------------------------------------
   const resetRotationSchedule = useCallback(() => {
     if (rotationTimerRef.current) {
@@ -297,8 +360,8 @@ export default function DashboardPage() {
         return next;
       });
       applyNextPixelShift();
-    }, DASHBOARD_CONFIG.rotationIntervalMs);
-  }, [isAutoRotationActive, applyNextPixelShift]);
+    }, autoRotationInterval * 1000);
+  }, [isAutoRotationActive, autoRotationInterval, applyNextPixelShift]);
 
   useEffect(() => {
     resetRotationSchedule();
@@ -309,15 +372,15 @@ export default function DashboardPage() {
     };
   }, [resetRotationSchedule]);
 
-  // 手動で画面を切り替えた時のハンドラ (※切り替えから30秒きっちり維持)
+  // 手動で画面を切り替えた時のハンドラ (※切り替えから設定秒数きっちり維持)
   const handleManualSwitch = (mode: ViewMode) => {
     setViewMode(mode);
     applyNextPixelShift();
-    // タイマーを即時リセットし、今からきっちり30秒後に次の切り替えをスケジュール
+    // タイマーを即時リセットし、今からきっちり指定秒数後に次の切り替えをスケジュール
     resetRotationSchedule();
   };
 
-  // 設定保存ハンドラ
+  // 設定保存ハンドラ群
   const handleToggleTimeFormat = (format: '12h' | '24h') => {
     setTimeFormat(format);
     try {
@@ -332,18 +395,78 @@ export default function DashboardPage() {
     } catch {}
   };
 
+  // アクティブな背景プリセット
+  const activeBgPreset = BACKGROUND_PRESETS.find((p) => p.id === backgroundStyle);
+  const activeWallpaperUrl =
+    backgroundStyle === 'custom' ? customWallpaperUrl : activeBgPreset?.url;
+
+  const handleUpdateInterval = (sec: number) => {
+    setAutoRotationInterval(sec);
+    try {
+      localStorage.setItem('desk_rotation_interval', sec.toString());
+    } catch {}
+  };
+
+  const handleUpdateGlassOpacity = (val: number) => {
+    setGlassOpacity(val);
+    try {
+      localStorage.setItem('desk_glass_opacity', val.toString());
+    } catch {}
+  };
+
+  const handleUpdateThemeColor = (themeId: ThemeColorId) => {
+    setThemeColor(themeId);
+    try {
+      localStorage.setItem('desk_theme_color', themeId);
+    } catch {}
+  };
+
+  const handleUpdateBackgroundStyle = (bgId: BackgroundStyleId) => {
+    setBackgroundStyle(bgId);
+    try {
+      localStorage.setItem('desk_background_style', bgId);
+    } catch {}
+  };
+
+  const handleUpdateCustomWallpaper = (url: string) => {
+    setCustomWallpaperUrl(url);
+    try {
+      localStorage.setItem('desk_custom_wallpaper', url);
+    } catch {}
+  };
+
   // ----------------------------------------------------------------------------
   // レンダリング
   // ----------------------------------------------------------------------------
   return (
     <main className="relative h-screen w-screen bg-[#060810] text-slate-100 overflow-hidden flex flex-col justify-between select-none">
       {/* ========================================================================
-          背景: 有機的アンビエントオーブ (iOSリキッドガラスの深みを生む光球)
+          背景: 壁紙画像 (Unsplash/カスタム) + 遮光オーバーレイ + 有機的アンビエントオーブ
       ======================================================================== */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-[10%] -left-[10%] w-[55vw] h-[55vw] rounded-full bg-cyan-600/15 blur-[120px] animate-orb-1" />
-        <div className="absolute top-[20%] right-[-15%] w-[50vw] h-[50vw] rounded-full bg-purple-600/15 blur-[130px] animate-orb-2" />
-        <div className="absolute -bottom-[20%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-emerald-600/10 blur-[140px]" />
+        {/* 背景画像レイヤー */}
+        {activeWallpaperUrl && (
+          <div
+            className="absolute inset-0 bg-cover bg-center transition-all duration-1000 scale-105"
+            style={{ backgroundImage: `url(${activeWallpaperUrl})` }}
+          />
+        )}
+
+        {/* 遮光オーバーレイ (背景写真がある場合は暗さを重ねて前面テキストの可読性を確保) */}
+        {activeWallpaperUrl && (
+          <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] transition-all duration-1000" />
+        )}
+
+        {/* 有機的アンビエントオーブ (写真の上でもほのかに輝き、リキッドガラスのすりガラス感を最大化) */}
+        <div
+          className={`absolute inset-0 overflow-hidden transition-opacity duration-1000 ${
+            activeWallpaperUrl ? 'opacity-35' : 'opacity-100'
+          }`}
+        >
+          <div className="absolute -top-[10%] -left-[10%] w-[55vw] h-[55vw] rounded-full bg-cyan-600/15 blur-[120px] animate-orb-1" />
+          <div className="absolute top-[20%] right-[-15%] w-[50vw] h-[50vw] rounded-full bg-purple-600/15 blur-[130px] animate-orb-2" />
+          <div className="absolute -bottom-[20%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-emerald-600/10 blur-[140px]" />
+        </div>
       </div>
 
       {/* ========================================================================
@@ -440,61 +563,64 @@ export default function DashboardPage() {
                 <p className="text-xs font-bold text-white truncate group-hover:text-emerald-300 transition-colors leading-tight">
                   {spotifyTrack.name}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate leading-tight mt-0.5">
+                <p className="text-[10px] text-slate-400 truncate leading-tight">
                   {spotifyTrack.artists}
                 </p>
               </div>
 
-              {/* イコライザーバー */}
+              {/* イコライザーバー (再生中のみ) */}
               {spotifyTrack.isPlaying && (
-                <div className="hidden sm:flex items-end gap-0.5 h-3.5 px-1 shrink-0">
+                <div className="hidden sm:flex items-end gap-0.5 h-3 shrink-0 ml-1">
                   <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-1" />
                   <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-2" />
-                  <span className="w-0.5 bg-cyan-400 rounded-full animate-eq-3" />
+                  <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-3" />
                 </div>
               )}
 
-              {/* ミニ操作ボタン */}
-              <div
-                className="flex items-center gap-1 shrink-0 ml-1"
-                onClick={(e) => e.stopPropagation()}
+              {/* 一時停止 / 再開ボタン */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSpotifyControl(spotifyTrack.isPlaying ? 'pause' : 'play');
+                }}
+                disabled={isSpotifyControlling}
+                className="p-1 rounded-lg hover:bg-white/15 text-slate-200 hover:text-white transition-all ml-1 shrink-0"
               >
-                <button
-                  onClick={() => handleSpotifyControl(spotifyTrack.isPlaying ? 'pause' : 'play')}
-                  disabled={isSpotifyControlling}
-                  className="p-1 rounded-full text-slate-200 hover:text-white hover:bg-white/15 transition-all"
-                  title={spotifyTrack.isPlaying ? 'Pause' : 'Play'}
-                >
-                  {spotifyTrack.isPlaying ? (
-                    <Pause className="w-3.5 h-3.5 fill-current" />
-                  ) : (
-                    <Play className="w-3.5 h-3.5 fill-current ml-0.5" />
-                  )}
-                </button>
-                <button
-                  onClick={() => handleSpotifyControl('next')}
-                  disabled={isSpotifyControlling}
-                  className="p-1 rounded-full text-slate-300 hover:text-white hover:bg-white/15 transition-all"
-                  title="Next"
-                >
-                  <SkipForward className="w-3.5 h-3.5 fill-current" />
-                </button>
-              </div>
+                {spotifyTrack.isPlaying ? (
+                  <Pause className="w-3.5 h-3.5 fill-current" />
+                ) : (
+                  <Play className="w-3.5 h-3.5 fill-current" />
+                )}
+              </button>
+
+              {/* 次の曲 */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSpotifyControl('next');
+                }}
+                disabled={isSpotifyControlling}
+                className="p-1 rounded-lg hover:bg-white/15 text-slate-200 hover:text-white transition-all shrink-0"
+              >
+                <SkipForward className="w-3.5 h-3.5" />
+              </button>
             </div>
           ) : (
-            /* 通常システムステータス */
+            /* 非再生時のデスク情報ステータス */
             <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 text-xs">
+              <div className="flex items-center gap-2 text-xs text-slate-300 liquid-glass-pill px-3 py-1 rounded-full">
                 {isOnline ? (
-                  <div className="flex items-center gap-1.5 text-emerald-400 liquid-glass-pill px-2.5 py-1 rounded-full">
-                    <Wifi className="w-3 h-3" />
-                    <span className="hidden sm:inline font-mono text-[10px] font-semibold">ONLINE</span>
-                  </div>
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="hidden sm:inline font-mono">ONLINE</span>
+                    <Wifi className="w-3 h-3 text-emerald-400 sm:hidden" />
+                  </>
                 ) : (
-                  <div className="flex items-center gap-1.5 text-amber-300 liquid-glass-pill px-2.5 py-1 rounded-full bg-amber-500/20 border-amber-400/30">
-                    <WifiOff className="w-3 h-3 animate-pulse" />
-                    <span className="font-mono text-[10px] font-semibold">OFFLINE</span>
-                  </div>
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-rose-400" />
+                    <span className="hidden sm:inline font-mono text-rose-300">OFFLINE</span>
+                    <WifiOff className="w-3 h-3 text-rose-400 sm:hidden" />
+                  </>
                 )}
               </div>
 
@@ -503,23 +629,34 @@ export default function DashboardPage() {
                 className="hidden lg:flex items-center gap-1.5 text-[10px] text-slate-300 liquid-glass-pill px-2.5 py-1 rounded-full"
                 title={`Pixel Shift: x=${pixelOffset.x}px, y=${pixelOffset.y}px`}
               >
-                <ShieldCheck className="w-3 h-3 text-cyan-400" />
+                <ShieldCheck
+                  className="w-3 h-3"
+                  style={{ color: 'var(--theme-accent, #22d3ee)' }}
+                />
                 <span>Shift ({pixelOffset.x}, {pixelOffset.y})</span>
               </div>
             </div>
           )}
         </div>
 
-        {/* 中央: 画面切り替えタブ (英語 / 日本語対応) */}
+        {/* 中央: 画面切り替えタブ (英語 / 日本語対応 & テーマカラー連動) */}
         <div className="flex items-center gap-1.5 liquid-glass-pill p-1 rounded-2xl shadow-lg">
           <button
             id="tab-main"
             onClick={() => handleManualSwitch('A')}
             className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'A'
-                ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-500/30 font-bold'
+                ? 'text-slate-950 shadow-md font-bold'
                 : 'text-slate-300 hover:text-white'
             }`}
+            style={
+              viewMode === 'A'
+                ? {
+                    backgroundColor: 'var(--theme-accent, #22d3ee)',
+                    boxShadow: '0 4px 14px var(--theme-accent-glow, rgba(34, 211, 238, 0.4))',
+                  }
+                : {}
+            }
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
             <span>{language === 'en' ? 'MAIN' : 'メイン'}</span>
@@ -554,7 +691,7 @@ export default function DashboardPage() {
 
         {/* 右側: 自動ローテーショントグル & 設定 */}
         <div className="flex items-center gap-2">
-          {/* 自動回転 一時停止/再開 */}
+          {/* 自動回転 一時停止/再開 (設定秒数にリアルタイム連動) */}
           <button
             onClick={() => setIsAutoRotationActive(!isAutoRotationActive)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
@@ -611,11 +748,280 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-sm text-slate-200">
-              {/* 1. 時計フォーマット切り替え (12h / 24h) */}
+            <div className="flex-1 overflow-y-auto py-4 space-y-4 text-sm text-slate-200 pr-1">
+              {/* 1. 自動切り替わり秒数の変更スライダー */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl liquid-glass-pill" style={{ color: 'var(--theme-accent, #22d3ee)' }}>
+                      <Sliders className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-white block">
+                        {language === 'en' ? 'Auto-Rotation Interval' : '画面自動切り替え秒数'}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {language === 'en'
+                          ? 'Duration before switching views (A ⇄ B ⇄ C)'
+                          : '各画面（メイン・Spotify・ニュース）の滞在秒数'}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className="font-mono text-sm font-bold px-3 py-1 rounded-xl liquid-glass-pill"
+                    style={{ color: 'var(--theme-accent, #22d3ee)' }}
+                  >
+                    {autoRotationInterval} {language === 'en' ? 'sec' : '秒'}
+                  </span>
+                </div>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="text-xs text-slate-400 font-mono">10s</span>
+                  <input
+                    type="range"
+                    min={10}
+                    max={120}
+                    step={5}
+                    value={autoRotationInterval}
+                    onChange={(e) => handleUpdateInterval(parseInt(e.target.value, 10))}
+                    className="flex-1 accent-cyan-400 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none"
+                    style={{ accentColor: 'var(--theme-accent, #22d3ee)' }}
+                  />
+                  <span className="text-xs text-slate-400 font-mono">120s</span>
+                </div>
+
+                {/* クイック選択プリセット */}
+                <div className="flex items-center gap-2 mt-3 pt-2 border-t border-white/5">
+                  <span className="text-[11px] text-slate-400">{language === 'en' ? 'Presets:' : 'プリセット:'}</span>
+                  {[15, 30, 45, 60, 90].map((sec) => (
+                    <button
+                      key={sec}
+                      onClick={() => handleUpdateInterval(sec)}
+                      className={`px-2.5 py-0.5 rounded-lg text-xs font-mono font-medium transition-all ${
+                        autoRotationInterval === sec
+                          ? 'text-slate-950 font-bold shadow-sm'
+                          : 'liquid-glass-pill text-slate-300 hover:text-white'
+                      }`}
+                      style={
+                        autoRotationInterval === sec
+                          ? { backgroundColor: 'var(--theme-accent, #22d3ee)' }
+                          : {}
+                      }
+                    >
+                      {sec}s
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 2. リキッドガラスの透過率変更スライダー */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl liquid-glass-pill" style={{ color: 'var(--theme-accent, #22d3ee)' }}>
+                      <Sparkles className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-white block">
+                        {language === 'en' ? 'Liquid Glass Transparency' : 'リキッドガラスの透過率'}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {language === 'en'
+                          ? 'Glass panel background opacity (lower = more transparent)'
+                          : 'すりガラスの濃さ（低いほど背景が透け、高いほど文字重視）'}
+                      </span>
+                    </div>
+                  </div>
+                  <span
+                    className="font-mono text-sm font-bold px-3 py-1 rounded-xl liquid-glass-pill"
+                    style={{ color: 'var(--theme-accent, #22d3ee)' }}
+                  >
+                    {glassOpacity}%
+                  </span>
+                </div>
+
+                <div className="mt-3 flex items-center gap-3">
+                  <span className="text-xs text-slate-400 font-mono">20% ({language === 'en' ? 'Clear' : '透明'})</span>
+                  <input
+                    type="range"
+                    min={20}
+                    max={85}
+                    step={5}
+                    value={glassOpacity}
+                    onChange={(e) => handleUpdateGlassOpacity(parseInt(e.target.value, 10))}
+                    className="flex-1 cursor-pointer h-2 bg-slate-800 rounded-lg appearance-none"
+                    style={{ accentColor: 'var(--theme-accent, #22d3ee)' }}
+                  />
+                  <span className="text-xs text-slate-400 font-mono">85% ({language === 'en' ? 'Solid' : '濃密'})</span>
+                </div>
+
+                {/* クイック選択プリセット */}
+                <div className="flex items-center gap-2 mt-3 pt-2 border-t border-white/5">
+                  <span className="text-[11px] text-slate-400">{language === 'en' ? 'Style:' : 'スタイル:'}</span>
+                  {[
+                    { label: language === 'en' ? '30% Transparent' : '30% クリア', val: 30 },
+                    { label: language === 'en' ? '52% Balanced' : '52% 標準', val: 52 },
+                    { label: language === 'en' ? '70% High Contrast' : '70% くっきり', val: 70 },
+                  ].map((p) => (
+                    <button
+                      key={p.val}
+                      onClick={() => handleUpdateGlassOpacity(p.val)}
+                      className={`px-2.5 py-0.5 rounded-lg text-xs font-medium transition-all ${
+                        glassOpacity === p.val
+                          ? 'text-slate-950 font-bold shadow-sm'
+                          : 'liquid-glass-pill text-slate-300 hover:text-white'
+                      }`}
+                      style={
+                        glassOpacity === p.val
+                          ? { backgroundColor: 'var(--theme-accent, #22d3ee)' }
+                          : {}
+                      }
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. アプリのテーマカラーの変更設定 */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-xl liquid-glass-pill" style={{ color: 'var(--theme-accent, #22d3ee)' }}>
+                    <Palette className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white block">
+                      {language === 'en' ? 'Theme Accent Color' : 'アプリのテーマカラー'}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {language === 'en'
+                        ? 'Select accent color for clocks, indicators & buttons'
+                        : '時計、秒針、インジケーター等のアクセントカラーを変更'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* カラーパレット選択 */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  {(Object.keys(THEME_COLORS) as ThemeColorId[]).map((id) => {
+                    const theme = THEME_COLORS[id];
+                    const isSelected = themeColor === id;
+                    return (
+                      <button
+                        key={id}
+                        onClick={() => handleUpdateThemeColor(id)}
+                        className={`flex items-center gap-2.5 p-2 rounded-xl transition-all border text-left cursor-pointer ${
+                          isSelected
+                            ? 'liquid-glass font-bold shadow-lg scale-102'
+                            : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:text-white'
+                        }`}
+                        style={
+                          isSelected
+                            ? {
+                                borderColor: theme.accent,
+                                boxShadow: `0 0 16px ${theme.accentGlow}`,
+                              }
+                            : {}
+                        }
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full shrink-0 shadow-sm"
+                          style={{
+                            backgroundColor: theme.accent,
+                            boxShadow: `0 0 8px ${theme.accentGlow}`,
+                          }}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <span className="text-xs block truncate">
+                            {language === 'en' ? theme.name : theme.nameJa}
+                          </span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* 4. 背景壁紙スタイル (Unsplash / PC壁紙 / オーブ) */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle">
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="p-2 rounded-xl liquid-glass-pill" style={{ color: 'var(--theme-accent, #22d3ee)' }}>
+                    <ImageIcon className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white block">
+                      {language === 'en' ? 'Background Wallpaper Style' : '背景スタイル (壁紙設定)'}
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      {language === 'en'
+                        ? 'Enhance frosted glass with Unsplash photography or custom wallpaper'
+                        : 'Unsplash高精細写真やPC壁紙で、すりガラスの立体感をさらに向上'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* プリセット選択ボタン一覧 */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {BACKGROUND_PRESETS.map((preset) => {
+                    const isSelected = backgroundStyle === preset.id;
+                    return (
+                      <button
+                        key={preset.id}
+                        onClick={() => handleUpdateBackgroundStyle(preset.id)}
+                        className={`flex items-center justify-between p-2.5 rounded-xl border transition-all text-left ${
+                          isSelected
+                            ? 'liquid-glass text-white font-bold shadow-md'
+                            : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:text-white'
+                        }`}
+                        style={
+                          isSelected
+                            ? {
+                                borderColor: 'var(--theme-accent, #22d3ee)',
+                                boxShadow: '0 0 12px var(--theme-accent-glow, rgba(34, 211, 238, 0.4))',
+                              }
+                            : {}
+                        }
+                      >
+                        <span className="text-xs">
+                          {language === 'en' ? preset.name : preset.nameJa}
+                        </span>
+                        {isSelected && (
+                          <span
+                            className="w-2 h-2 rounded-full shadow-sm"
+                            style={{ backgroundColor: 'var(--theme-accent, #22d3ee)' }}
+                          />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* カスタムURL入力欄 (custom選択時) */}
+                {backgroundStyle === 'custom' && (
+                  <div className="mt-3 pt-3 border-t border-white/10">
+                    <label className="text-xs text-slate-300 block mb-1.5">
+                      {language === 'en' ? 'Custom Wallpaper Image URL:' : 'カスタム壁紙画像のURL (PC壁紙等):'}
+                    </label>
+                    <input
+                      type="url"
+                      value={customWallpaperUrl}
+                      onChange={(e) => handleUpdateCustomWallpaper(e.target.value)}
+                      placeholder="https://example.com/wallpaper.jpg"
+                      className="w-full bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                    />
+                    <p className="text-[11px] text-slate-400 mt-1">
+                      {language === 'en'
+                        ? 'Direct image URL (jpg, png, webp). It will be dimmed for readability.'
+                        : '画像の直リンクURLを入力してください。前面文字が読めるよう自動で適度に遮光されます。'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 5. 時計フォーマット切り替え (12h / 24h) */}
               <div className="p-4 rounded-2xl liquid-glass-subtle flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-xl liquid-glass-pill text-cyan-400">
+                  <div className="p-2 rounded-xl liquid-glass-pill" style={{ color: 'var(--theme-accent, #22d3ee)' }}>
                     <Clock className="w-4 h-4" />
                   </div>
                   <div>
@@ -633,9 +1039,14 @@ export default function DashboardPage() {
                     onClick={() => handleToggleTimeFormat('12h')}
                     className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                       timeFormat === '12h'
-                        ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/25'
+                        ? 'text-slate-950 font-bold shadow-md'
                         : 'text-slate-300 hover:text-white'
                     }`}
+                    style={
+                      timeFormat === '12h'
+                        ? { backgroundColor: 'var(--theme-accent, #22d3ee)' }
+                        : {}
+                    }
                   >
                     12h
                   </button>
@@ -643,16 +1054,21 @@ export default function DashboardPage() {
                     onClick={() => handleToggleTimeFormat('24h')}
                     className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
                       timeFormat === '24h'
-                        ? 'bg-cyan-500 text-slate-950 font-bold shadow-md shadow-cyan-500/25'
+                        ? 'text-slate-950 font-bold shadow-md'
                         : 'text-slate-300 hover:text-white'
                     }`}
+                    style={
+                      timeFormat === '24h'
+                        ? { backgroundColor: 'var(--theme-accent, #22d3ee)' }
+                        : {}
+                    }
                   >
                     24h
                   </button>
                 </div>
               </div>
 
-              {/* 2. 言語切り替え (English / 日本語) */}
+              {/* 6. 言語切り替え (English / 日本語) */}
               <div className="p-4 rounded-2xl liquid-glass-subtle flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl liquid-glass-pill text-purple-400">
@@ -692,7 +1108,7 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              {/* 3. 天気の地点変更 */}
+              {/* 7. 天気の地点変更 */}
               <div className="p-4 rounded-2xl liquid-glass-subtle">
                 <div className="flex items-center gap-3 mb-2">
                   <div className="p-2 rounded-xl liquid-glass-pill text-amber-400">
@@ -714,7 +1130,8 @@ export default function DashboardPage() {
                     value={cityInput}
                     onChange={(e) => setCityInput(e.target.value)}
                     placeholder={language === 'en' ? 'City name...' : '地名を入力...'}
-                    className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400"
+                    className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none"
+                    style={{ borderColor: 'rgba(255, 255, 255, 0.15)' }}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') handleApplyCity();
                     }}
@@ -722,7 +1139,8 @@ export default function DashboardPage() {
                   <button
                     onClick={handleApplyCity}
                     disabled={isSearchingCity}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-cyan-500/20 disabled:opacity-50"
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-slate-950 text-xs font-bold transition-all shadow-md disabled:opacity-50"
+                    style={{ backgroundColor: 'var(--theme-accent, #22d3ee)' }}
                   >
                     <Search className="w-3.5 h-3.5" />
                     <span>{isSearchingCity ? '...' : language === 'en' ? 'Apply' : '適用'}</span>
@@ -736,7 +1154,7 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {/* 4. Spotify連携情報 */}
+              {/* 8. Spotify連携情報 */}
               <div className="p-4 rounded-2xl liquid-glass-subtle">
                 <div className="flex items-center justify-between mb-1">
                   <span className="font-semibold text-white">🎵 Spotify</span>
@@ -761,10 +1179,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="pt-4 border-t border-white/10 flex justify-end">
+            <div className="pt-4 border-t border-white/10 flex justify-end shrink-0">
               <button
                 onClick={() => setShowSettingsModal(false)}
-                className="px-5 py-2 rounded-xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-bold transition-all shadow-md shadow-cyan-500/20"
+                className="px-5 py-2 rounded-xl text-slate-950 text-xs font-bold transition-all shadow-md"
+                style={{ backgroundColor: 'var(--theme-accent, #22d3ee)' }}
               >
                 {language === 'en' ? 'Close' : '閉じる'}
               </button>

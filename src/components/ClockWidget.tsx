@@ -134,7 +134,13 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
         {/* 12h表記時の AM/PM バッジ (時間の上に小さくスタイリッシュに配置) */}
         {timeFormat === '12h' && (
           <div className="mb-1">
-            <span className="text-[11px] font-mono font-bold tracking-widest px-2.5 py-0.5 rounded-md liquid-glass-pill text-cyan-300 border border-cyan-400/30 shadow-sm">
+            <span
+              className="text-[11px] font-mono font-bold tracking-widest px-2.5 py-0.5 rounded-md liquid-glass-pill shadow-sm"
+              style={{
+                color: 'var(--theme-accent, #22d3ee)',
+                borderColor: 'var(--theme-accent-border, rgba(34, 211, 238, 0.35))',
+              }}
+            >
               {ampm}
             </span>
           </div>
@@ -145,14 +151,20 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
           <span className="font-mono text-7xl sm:text-8xl md:text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-slate-400 drop-shadow-sm">
             {hoursStr}
           </span>
-          <span className="font-mono text-6xl sm:text-7xl md:text-8xl font-light text-cyan-400/90 mx-1 sm:mx-2 animate-pulse">
+          <span
+            className="font-mono text-6xl sm:text-7xl md:text-8xl font-light mx-1 sm:mx-2 animate-pulse"
+            style={{ color: 'var(--theme-accent, #22d3ee)' }}
+          >
             :
           </span>
           <span className="font-mono text-7xl sm:text-8xl md:text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-slate-400 drop-shadow-sm">
             {minutesStr}
           </span>
           <div className="ml-3 sm:ml-4 flex flex-col items-start font-mono">
-            <span className="text-2xl sm:text-3xl font-bold text-cyan-400/90 tabular-nums">
+            <span
+              className="text-2xl sm:text-3xl font-bold tabular-nums"
+              style={{ color: 'var(--theme-accent, #22d3ee)' }}
+            >
               {secondsStr}
             </span>
             <span className="text-[10px] tracking-widest text-slate-400 uppercase font-semibold">
@@ -192,9 +204,14 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
                 style={{ transform: `rotate(${rot}deg)` }}
               >
                 <div
-                  className={`rounded-full ${
-                    isQuarter ? 'w-1 h-3 bg-cyan-400' : 'w-0.5 h-1.5 bg-slate-500/80'
-                  }`}
+                  className="rounded-full"
+                  style={{
+                    width: isQuarter ? '4px' : '2px',
+                    height: isQuarter ? '12px' : '6px',
+                    backgroundColor: isQuarter
+                      ? 'var(--theme-accent, #22d3ee)'
+                      : 'rgba(148, 163, 184, 0.6)',
+                  }}
                 />
               </div>
             );
@@ -222,24 +239,32 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
             }}
           />
 
-          {/* 秒針 (シアン色アクセント・スイープ風) */}
+          {/* 秒針 (テーマカラーアクセント・スイープ風) */}
           <div
-            className="absolute w-0.5 h-16 md:h-18 bg-cyan-400 rounded-full origin-bottom shadow-sm shadow-cyan-400"
+            className="absolute w-0.5 h-16 md:h-18 rounded-full origin-bottom shadow-sm"
             style={{
               bottom: '50%',
               transform: `rotate(${secondDeg}deg)`,
               transformOrigin: '50% 100%',
               transition: 'transform 0.15s cubic-bezier(0.4, 2, 0.3, 1)',
+              backgroundColor: 'var(--theme-accent, #22d3ee)',
+              boxShadow: '0 0 8px var(--theme-accent-glow, rgba(34, 211, 238, 0.4))',
             }}
           />
 
           {/* 針の中心ピボット */}
-          <div className="relative z-10 w-3 h-3 rounded-full bg-cyan-400 shadow-md shadow-cyan-400/50 border border-slate-900" />
+          <div
+            className="relative z-10 w-3 h-3 rounded-full shadow-md border border-slate-900"
+            style={{ backgroundColor: 'var(--theme-accent, #22d3ee)' }}
+          />
         </div>
 
         {/* 下部: 1日の進捗ゲージ (Day Progress) */}
         <div className="mt-3 flex items-center gap-2 text-[10px] font-mono text-slate-400">
-          <ClockIcon className="w-3 h-3 text-cyan-400" />
+          <ClockIcon
+            className="w-3 h-3"
+            style={{ color: 'var(--theme-accent, #22d3ee)' }}
+          />
           <span>DAY {dayProgressPercent}%</span>
         </div>
       </div>
