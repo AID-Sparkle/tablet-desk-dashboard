@@ -53,6 +53,7 @@ import {
   NewsItem,
   PixelShiftOffset,
   SwitchBotMeterData,
+  SwitchBotDevice,
 } from '@/types';
 
 export default function DashboardPage() {
@@ -113,8 +114,9 @@ export default function DashboardPage() {
     return `${hours.toString().padStart(2, '0')}:${minutes}`;
   };
 
-  // 新機能: SwitchBot 室内温湿度データ
+  // 新機能: SwitchBot 室内温湿度データ & 操作可能デバイス一覧
   const [switchBotMeter, setSwitchBotMeter] = useState<SwitchBotMeterData | null>(null);
+  const [switchBotDevices, setSwitchBotDevices] = useState<SwitchBotDevice[]>([]);
   const [isSwitchBotConfigured, setIsSwitchBotConfigured] = useState<boolean>(false);
   const [isSwitchBotLoading, setIsSwitchBotLoading] = useState<boolean>(false);
 
@@ -385,7 +387,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // SwitchBot 室内温湿度データの取得
+  // SwitchBot 室内温湿度データ & 操作可能デバイス一覧の取得
   const fetchSwitchBotMeter = useCallback(async () => {
     setIsSwitchBotLoading(true);
     try {
@@ -396,6 +398,9 @@ export default function DashboardPage() {
         if (json.data) {
           setSwitchBotMeter(json.data);
         }
+        if (json.devices && Array.isArray(json.devices)) {
+          setSwitchBotDevices(json.devices);
+        }
       }
     } catch (e) {
       console.warn('SwitchBot fetch error:', e);
@@ -403,6 +408,43 @@ export default function DashboardPage() {
       setIsSwitchBotLoading(false);
     }
   }, []);
+
+  // SwitchBot デバイス操作 (プラグ/ボット/照明など)
+  const handleControlSwitchBotDevice = async (
+    deviceId: string,
+    command: 'turnOn' | 'turnOff'
+  ): Promise<boolean> => {
+    try {
+      // 楽観的UI更新（powerStateの即時切り替え）
+      setSwitchBotDevices((prev) =>
+        prev.map((d) => {
+          if (d.deviceId === deviceId) {
+            const nextPower: 'on' | 'off' = command === 'turnOn' ? 'on' : 'off';
+            return { ...d, powerState: nextPower };
+          }
+          return d;
+        })
+      );
+
+      const res = await fetch('/api/switchbot', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ deviceId, command }),
+      });
+
+      if (res.ok) {
+        // デバイス側の反映ラグを考慮し1秒後に最新状態を取得
+        setTimeout(() => {
+          fetchSwitchBotMeter();
+        }, 1000);
+        return true;
+      }
+      return false;
+    } catch (e) {
+      console.error('SwitchBot device control error:', e);
+      return false;
+    }
+  };
 
   // ----------------------------------------------------------------------------
   // 4. 初回取得 & 定期ポーリング
@@ -443,6 +485,8 @@ export default function DashboardPage() {
   // ----------------------------------------------------------------------------
   // 5. 画面自動ローテーション (設定秒数きっちり維持するタイマー管理)
   // ----------------------------------------------------------------------------
+  const isSpotifyPlaying = Boolean(spotifyTrack && spotifyTrack.isPlaying);
+
   const resetRotationSchedule = useCallback(() => {
     if (rotationTimerRef.current) {
       clearInterval(rotationTimerRef.current);
@@ -452,14 +496,19 @@ export default function DashboardPage() {
     rotationTimerRef.current = setInterval(() => {
       setViewMode((prev) => {
         let next: ViewMode = 'A';
-        if (prev === 'A') next = 'B';
-        else if (prev === 'B') next = 'C';
-        else if (prev === 'C') next = 'A';
+        // Spotifyで再生中の曲がない場合はState Bをスキップし、A ⇄ C のみ自動切替
+        if (prev === 'A') {
+          next = isSpotifyPlaying ? 'B' : 'C';
+        } else if (prev === 'B') {
+          next = 'C';
+        } else if (prev === 'C') {
+          next = 'A';
+        }
         return next;
       });
       applyNextPixelShift();
     }, autoRotationInterval * 1000);
-  }, [isAutoRotationActive, autoRotationInterval, applyNextPixelShift]);
+  }, [isAutoRotationActive, autoRotationInterval, isSpotifyPlaying, applyNextPixelShift]);
 
   useEffect(() => {
     resetRotationSchedule();
@@ -608,6 +657,8 @@ export default function DashboardPage() {
             timeFormat={timeFormat}
             language={language}
             indoorData={switchBotMeter}
+            switchBotDevices={switchBotDevices}
+            onControlSwitchBotDevice={handleControlSwitchBotDevice}
             onOpenSettings={() => setShowSettingsModal(true)}
           />
         </div>

@@ -23,7 +23,7 @@ function generateSwitchBotHeaders(token: string, secret: string) {
 }
 
 // ------------------------------------------------------------------------------
-// GET: SwitchBot 温湿度計から室温・湿度ステータスを取得
+// GET: SwitchBot 温湿度計から室温・湿度ステータス & 操作可能デバイス一覧を取得
 // ------------------------------------------------------------------------------
 export async function GET(req: NextRequest) {
   const token = process.env.SWITCHBOT_TOKEN;
@@ -33,175 +33,169 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       configured: false,
       error: 'SwitchBot credentials (TOKEN / SECRET) not configured in .env.local',
+      data: null,
+      devices: [],
     });
   }
 
-  // クエリまたは環境変数から温湿度計のデバイスIDを取得
   const searchParams = req.nextUrl.searchParams;
-  let deviceId =
+  let meterDeviceId =
     searchParams.get('deviceId') ||
-    process.env.SWITCHBOT_METER_DEVICE_ID ||
-    process.env.SWITCHBOT_DEVICE_ID;
+    process.env.SWITCHBOT_METER_DEVICE_ID;
 
   let deviceName = '室内';
+  const controllableDevices: any[] = [];
 
   try {
-    // もしデバイスIDが明示されていない、または自動探索したい場合
-    if (!deviceId) {
-      // 登録デバイス一覧を取得して温湿度計（Meter, MeterPlus, Hub 2等）を探索
-      const devicesRes = await fetch('https://api.switch-bot.com/v1.1/devices', {
-        headers: generateSwitchBotHeaders(token, secret),
-        cache: 'no-store',
-      });
+    // 1. 登録デバイス一覧を取得
+    const devicesRes = await fetch('https://api.switch-bot.com/v1.1/devices', {
+      headers: generateSwitchBotHeaders(token, secret),
+      cache: 'no-store',
+    });
 
-      if (devicesRes.ok) {
-        const devicesData = await devicesRes.json();
-        const deviceList = [
-          ...(devicesData.body?.deviceList || []),
-          ...(devicesData.body?.infraredRemoteList || []),
-        ];
+    if (devicesRes.ok) {
+      const devicesData = await devicesRes.json();
+      const rawList = devicesData.body?.deviceList || [];
 
-        // 温湿度計系デバイスを優先検索
-        const meterDevice = deviceList.find((d: any) =>
+      // 操作可能デバイス (プラグ、ライト、ボット、カーテン等) を抽出
+      const CONTROLLABLE_TYPES = new Set([
+        'Plug',
+        'Plug Mini (JP)',
+        'Plug Mini (US)',
+        'Bot',
+        'Color Bulb',
+        'Strip Light',
+        'Ceiling Light',
+        'Ceiling Light Pro',
+        'Curtain',
+        'Curtain 3',
+        'Blind Tilt',
+      ]);
+
+      for (const d of rawList) {
+        if (CONTROLLABLE_TYPES.has(d.deviceType)) {
+          controllableDevices.push({
+            deviceId: d.deviceId,
+            deviceName: d.deviceName,
+            deviceType: d.deviceType,
+            powerState: 'unknown',
+          });
+        }
+      }
+
+      // 温湿度計系デバイスを自動探索 (未指定時)
+      if (!meterDeviceId) {
+        const found = rawList.find((d: any) =>
           ['Meter', 'MeterPlus', 'WoIOSensor', 'Hub 2', 'MeterPro', 'MeterPro(CO2)'].includes(
             d.deviceType
           ) || (d.deviceName && d.deviceName.includes('温湿度'))
         );
-
-        if (meterDevice) {
-          deviceId = meterDevice.deviceId;
-          deviceName = meterDevice.deviceName || '室内';
+        if (found) {
+          meterDeviceId = found.deviceId;
+          deviceName = found.deviceName || '室内';
         }
       }
     }
 
-    if (!deviceId) {
-      return NextResponse.json({
-        configured: true,
-        foundMeter: false,
-        error: 'No SwitchBot meter device found. Please specify SWITCHBOT_METER_DEVICE_ID in .env.local',
-      });
+    // もし指定デバイスIDも探索結果もない場合は、デフォルトデバイスIDを使用
+    if (!meterDeviceId) {
+      meterDeviceId = process.env.SWITCHBOT_DEVICE_ID;
     }
 
-    // デバイスステータス取得
-    const statusRes = await fetch(
-      `https://api.switch-bot.com/v1.1/devices/${deviceId}/status`,
-      {
-        headers: generateSwitchBotHeaders(token, secret),
-        cache: 'no-store',
+    let meterData = null;
+
+    // 2. 温湿度計のステータスを取得
+    if (meterDeviceId) {
+      try {
+        const statusRes = await fetch(
+          `https://api.switch-bot.com/v1.1/devices/${meterDeviceId}/status`,
+          {
+            headers: generateSwitchBotHeaders(token, secret),
+            cache: 'no-store',
+          }
+        );
+
+        if (statusRes.ok) {
+          const statusJson = await statusRes.json();
+          if (statusJson.statusCode === 100 && statusJson.body) {
+            const b = statusJson.body;
+            if (typeof b.temperature === 'number' && typeof b.humidity === 'number') {
+              meterData = {
+                temperature: b.temperature,
+                humidity: b.humidity,
+                battery: typeof b.battery === 'number' ? b.battery : undefined,
+                deviceName,
+                updatedAt: new Date().toISOString(),
+              };
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch meter status:', err);
       }
-    );
-
-    if (!statusRes.ok) {
-      return NextResponse.json({
-        configured: true,
-        error: `SwitchBot status request failed with status: ${statusRes.status}`,
-      });
-    }
-
-    const statusData = await statusRes.json();
-
-    if (statusData.statusCode !== 100 || !statusData.body) {
-      return NextResponse.json({
-        configured: true,
-        error: statusData.message || 'Failed to get device status',
-        statusData,
-      });
-    }
-
-    const body = statusData.body;
-    const temperature = typeof body.temperature === 'number' ? body.temperature : null;
-    const humidity = typeof body.humidity === 'number' ? body.humidity : null;
-    const battery = typeof body.battery === 'number' ? body.battery : undefined;
-
-    if (temperature === null || humidity === null) {
-      return NextResponse.json({
-        configured: true,
-        error: 'Selected device does not have temperature/humidity readings',
-        body,
-      });
     }
 
     return NextResponse.json({
       configured: true,
-      data: {
-        temperature,
-        humidity,
-        battery,
-        deviceName,
-        updatedAt: new Date().toISOString(),
-      },
+      data: meterData,
+      devices: controllableDevices,
     });
   } catch (error: any) {
-    console.error('SwitchBot Status Fetch Error:', error);
+    console.error('SwitchBot Fetch Error:', error);
     return NextResponse.json(
-      { configured: true, error: error.message || 'Network error fetching SwitchBot status' },
+      { configured: true, error: error.message, data: null, devices: [] },
       { status: 500 }
     );
   }
 }
 
 // ------------------------------------------------------------------------------
-// POST: SwitchBot 給電制御 (ON/OFF コマンド)
+// POST: SwitchBot デバイス操作 (ON/OFF / 任意のコマンド)
 // ------------------------------------------------------------------------------
 export async function POST(req: NextRequest) {
-  // 1. APIキー検証 (不正アクセス防止)
-  const clientKey = req.headers.get('x-api-key');
-  const internalSecret = process.env.INTERNAL_SWITCHBOT_KEY || 'secret_local_key';
-
-  if (!clientKey || clientKey !== internalSecret) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // 2. パラメータ取得 (on または off)
-  const searchParams = req.nextUrl.searchParams;
-  let state = searchParams.get('state')?.toLowerCase();
-
-  if (!state) {
-    try {
-      const body = await req.json();
-      state = body.state?.toLowerCase();
-    } catch {
-      // no body
-    }
-  }
-
-  if (state !== 'on' && state !== 'off') {
-    return NextResponse.json(
-      { error: "Invalid state. Use 'on' or 'off'" },
-      { status: 400 }
-    );
-  }
-
-  // 3. SwitchBot設定確認
   const token = process.env.SWITCHBOT_TOKEN;
   const secret = process.env.SWITCHBOT_SECRET;
-  const deviceId = process.env.SWITCHBOT_DEVICE_ID;
 
-  if (!token || !secret || !deviceId) {
+  if (!token || !secret) {
     return NextResponse.json(
       { error: 'SwitchBot credentials not configured in environment variables' },
       { status: 503 }
     );
   }
 
-  const command = state === 'on' ? 'turnOn' : 'turnOff';
+  let body: any = {};
+  try {
+    body = await req.json();
+  } catch {}
+
+  const targetDeviceId = body.deviceId || process.env.SWITCHBOT_DEVICE_ID;
+  const command = body.command || (body.state === 'on' ? 'turnOn' : body.state === 'off' ? 'turnOff' : 'turnOn');
+  const parameter = body.parameter || 'default';
+  const commandType = body.commandType || 'command';
+
+  if (!targetDeviceId) {
+    return NextResponse.json(
+      { error: 'Device ID is required to execute SwitchBot command' },
+      { status: 400 }
+    );
+  }
 
   try {
-    const res = await fetch(`https://api.switch-bot.com/v1.1/devices/${deviceId}/commands`, {
+    const res = await fetch(`https://api.switch-bot.com/v1.1/devices/${targetDeviceId}/commands`, {
       method: 'POST',
       headers: generateSwitchBotHeaders(token, secret),
       body: JSON.stringify({
         command,
-        parameter: 'default',
-        commandType: 'command',
+        parameter,
+        commandType,
       }),
     });
 
     const result = await res.json();
     return NextResponse.json({
       success: result.statusCode === 100,
-      state,
+      deviceId: targetDeviceId,
+      command,
       switchBotResponse: result,
     });
   } catch (error: any) {
