@@ -134,8 +134,8 @@ const NewsListItem: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
       rel="noopener noreferrer"
       className="group flex items-center gap-2.5 py-1.5 px-1.5 -mx-1.5 rounded-xl hover:bg-white/5 transition-colors"
     >
-      {/* サムネイル画像（小さめ: 40x40px）またはドットアクセント */}
-      {item.imageUrl && !imgFailed ? (
+      {/* サムネイル画像（小さめ: 40x40px）- 画像がある場合のみ表示 */}
+      {item.imageUrl && !imgFailed && (
         <div className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-lg overflow-hidden bg-slate-800/80 border border-white/10">
           <img
             src={item.imageUrl}
@@ -144,8 +144,6 @@ const NewsListItem: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
             className="w-full h-full object-cover group-hover:scale-105 transition-transform"
           />
         </div>
-      ) : (
-        <div className="w-2 h-2 rounded-full bg-cyan-400 shrink-0 group-hover:scale-125 transition-transform shadow-sm shadow-cyan-400/50 ml-1 mr-1" />
       )}
 
       {/* 記事タイトル & メタ情報 (枠内に収まるように最適化) */}
@@ -187,8 +185,8 @@ const NewsGridCard: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
       rel="noopener noreferrer"
       className="liquid-glass group rounded-2xl overflow-hidden flex items-center gap-3 border border-white/10 hover:border-white/20 hover:bg-white/5 transition-all p-2.5 sm:p-3 h-full min-h-[88px]"
     >
-      {/* サムネイル画像 (左側、角丸、しっかり収まる幅・高さ) */}
-      {item.imageUrl && !imgFailed ? (
+      {/* サムネイル画像 (画像がある場合のみ左側に表示、ない場合はアイコンも非表示) */}
+      {item.imageUrl && !imgFailed && (
         <div className="relative w-24 sm:w-28 h-full min-h-[68px] max-h-[82px] rounded-xl overflow-hidden bg-slate-900/60 shrink-0 border border-white/10">
           <img
             src={item.imageUrl}
@@ -197,13 +195,9 @@ const NewsGridCard: React.FC<{ item: NewsItem; language: 'en' | 'ja' }> = ({
             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
           />
         </div>
-      ) : (
-        <div className="w-12 h-full min-h-[68px] rounded-xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/20 flex items-center justify-center text-cyan-400 shrink-0">
-          <Newspaper className="w-5 h-5 opacity-70" />
-        </div>
       )}
 
-      {/* 右側テキストエリア: バッジ、時間、記事タイトル */}
+      {/* 右側テキストエリア: バッジ、時間、記事タイトル (画像がない場合は全幅) */}
       <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
         <div className="flex items-center gap-2 mb-1 shrink-0">
           <span

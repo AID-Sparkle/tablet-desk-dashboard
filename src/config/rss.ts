@@ -32,11 +32,4 @@ export const RSS_FEEDS: FeedSource[] = [
     category: 'Game',
     accentColor: '#10b981', // emerald-500
   },
-  {
-    id: 'google-tech',
-    name: 'Google News (IT)',
-    url: 'https://news.google.com/rss/headlines/section/topic/TECHNOLOGY?hl=ja&gl=JP&ceid=JP:ja',
-    category: 'Tech',
-    accentColor: '#8b5cf6', // purple-500
-  },
 ];
