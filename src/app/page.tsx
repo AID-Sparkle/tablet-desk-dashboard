@@ -28,6 +28,7 @@ import {
   FolderOpen,
   RefreshCw,
   Check,
+  Home,
 } from 'lucide-react';
 import { PixelShifter } from '@/components/PixelShifter';
 import { StateA_Dashboard } from '@/components/StateA_Dashboard';
@@ -51,6 +52,7 @@ import {
   SpotifyStatus,
   NewsItem,
   PixelShiftOffset,
+  SwitchBotMeterData,
 } from '@/types';
 
 export default function DashboardPage() {
@@ -110,6 +112,11 @@ export default function DashboardPage() {
     }
     return `${hours.toString().padStart(2, '0')}:${minutes}`;
   };
+
+  // 新機能: SwitchBot 室内温湿度データ
+  const [switchBotMeter, setSwitchBotMeter] = useState<SwitchBotMeterData | null>(null);
+  const [isSwitchBotConfigured, setIsSwitchBotConfigured] = useState<boolean>(false);
+  const [isSwitchBotLoading, setIsSwitchBotLoading] = useState<boolean>(false);
 
   // ----------------------------------------------------------------------------
   // データステート
@@ -378,6 +385,25 @@ export default function DashboardPage() {
     }
   }, []);
 
+  // SwitchBot 室内温湿度データの取得
+  const fetchSwitchBotMeter = useCallback(async () => {
+    setIsSwitchBotLoading(true);
+    try {
+      const res = await fetch('/api/switchbot');
+      if (res.ok) {
+        const json = await res.json();
+        setIsSwitchBotConfigured(json.configured ?? false);
+        if (json.data) {
+          setSwitchBotMeter(json.data);
+        }
+      }
+    } catch (e) {
+      console.warn('SwitchBot fetch error:', e);
+    } finally {
+      setIsSwitchBotLoading(false);
+    }
+  }, []);
+
   // ----------------------------------------------------------------------------
   // 4. 初回取得 & 定期ポーリング
   // ----------------------------------------------------------------------------
@@ -387,15 +413,18 @@ export default function DashboardPage() {
     fetchSpotifyNowPlaying();
     fetchUnsplashDaily();
     fetchLocalWallpapers();
+    fetchSwitchBotMeter();
 
     const weatherTimer = setInterval(() => fetchWeather(), DASHBOARD_CONFIG.weather.refreshIntervalMs);
     const newsTimer = setInterval(fetchNews, DASHBOARD_CONFIG.rss.refreshIntervalMs);
+    const switchBotTimer = setInterval(fetchSwitchBotMeter, 60000); // 60秒ポーリング
 
     return () => {
       clearInterval(weatherTimer);
       clearInterval(newsTimer);
+      clearInterval(switchBotTimer);
     };
-  }, [fetchWeather, fetchNews, fetchSpotifyNowPlaying]);
+  }, [fetchWeather, fetchNews, fetchSpotifyNowPlaying, fetchUnsplashDaily, fetchLocalWallpapers, fetchSwitchBotMeter]);
 
   // Spotifyポーリング（再生中: 5秒、停止中: 25秒）
   useEffect(() => {
@@ -578,6 +607,8 @@ export default function DashboardPage() {
             isOnline={isOnline}
             timeFormat={timeFormat}
             language={language}
+            indoorData={switchBotMeter}
+            onOpenSettings={() => setShowSettingsModal(true)}
           />
         </div>
 
@@ -717,6 +748,25 @@ export default function DashboardPage() {
                 </div>
               ) : (
                 <span className="text-[10px] text-slate-400">--°C</span>
+              )}
+
+              {/* SwitchBot 室内温湿度 (連携時) */}
+              {switchBotMeter && (
+                <>
+                  <span className="w-px h-3.5 bg-white/20" />
+                  <div
+                    className="flex items-center gap-1 text-xs text-emerald-300"
+                    title={`室内: ${switchBotMeter.temperature}°C / ${switchBotMeter.humidity}%`}
+                  >
+                    <Home className="w-3 h-3 text-emerald-400" />
+                    <span className="font-semibold tabular-nums text-white">
+                      {switchBotMeter.temperature.toFixed(1)}°
+                    </span>
+                    <span className="text-[10px] text-emerald-200/80 hidden sm:inline font-mono">
+                      {switchBotMeter.humidity}%
+                    </span>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -1448,11 +1498,82 @@ export default function DashboardPage() {
                   href="/api/spotify/login"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all"
+                  className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all cursor-pointer"
                 >
                   <span>トークン再取得</span>
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
+              </div>
+
+              {/* 9. SwitchBot 温湿度計 連携情報 */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="p-2 rounded-xl liquid-glass-pill text-emerald-400">
+                      <Home className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-white block">
+                        SwitchBot 温湿度計 連携
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        お部屋の室温・湿度をリアルタイム取得して表示
+                      </span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={fetchSwitchBotMeter}
+                    disabled={isSwitchBotLoading}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl liquid-glass-pill text-xs text-emerald-300 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3.5 h-3.5 ${isSwitchBotLoading ? 'animate-spin' : ''}`} />
+                    <span>再取得</span>
+                  </button>
+                </div>
+
+                {/* ステータス表示 */}
+                {switchBotMeter ? (
+                  <div className="p-3 rounded-xl bg-emerald-950/20 border border-emerald-500/25 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
+                      <div>
+                        <span className="text-xs font-bold text-white block">
+                          {switchBotMeter.deviceName || 'SwitchBot 温湿度計'} 連動中
+                        </span>
+                        <span className="text-[11px] text-slate-400">
+                          {new Date(switchBotMeter.updatedAt).toLocaleTimeString()} 更新
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 font-mono text-sm font-bold">
+                      <span className="text-emerald-300">{switchBotMeter.temperature.toFixed(1)}°C</span>
+                      <span className="text-slate-300">{switchBotMeter.humidity}%</span>
+                      {switchBotMeter.battery !== undefined && (
+                        <span className="text-[10px] text-slate-400 font-normal">🔋{switchBotMeter.battery}%</span>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 space-y-2 text-xs">
+                    <div className="flex items-center gap-2 text-amber-300 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-amber-400" />
+                      <span>{isSwitchBotConfigured ? '温湿度計デバイスを探索中または応答なし' : 'SwitchBot API 未設定'}</span>
+                    </div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      お部屋のSwitchBot温湿度計と連動させるには、プロジェクトの <code className="text-cyan-200 bg-white/10 px-1 py-0.5 rounded font-mono">.env.local</code> に SwitchBotの Token と Secret を記入してください。
+                    </p>
+                    <div className="p-2.5 rounded-lg bg-black/40 font-mono text-[10px] text-slate-300 space-y-1">
+                      <p className="text-slate-400"># .env.local に記入する項目:</p>
+                      <p className="text-emerald-300">SWITCHBOT_TOKEN=&quot;あなたのトークン&quot;</p>
+                      <p className="text-emerald-300">SWITCHBOT_SECRET=&quot;あなたのシークレット&quot;</p>
+                      <p className="text-slate-500"># デバイスIDは自動探索されるため空欄でもOK</p>
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      ※TokenとSecretの取得方法: SwitchBotスマホアプリ ＞「プロフィール」＞「設定」＞「アプリバージョン」を10回連打して「開発者向けオプション」を表示
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
 

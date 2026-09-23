@@ -5,7 +5,7 @@ import { ClockWidget } from './ClockWidget';
 import { WeatherWidget } from './WeatherWidget';
 import { SpotifyWidget } from './SpotifyWidget';
 import { NewsWidget } from './NewsWidget';
-import { WeatherData, SpotifyTrack, SpotifyStatus, NewsItem } from '@/types';
+import { WeatherData, SpotifyTrack, SpotifyStatus, NewsItem, SwitchBotMeterData } from '@/types';
 
 interface StateADashboardProps {
   weather: WeatherData | null;
@@ -19,6 +19,8 @@ interface StateADashboardProps {
   isOnline: boolean;
   timeFormat?: '12h' | '24h';
   language?: 'en' | 'ja';
+  indoorData?: SwitchBotMeterData | null;
+  onOpenSettings?: () => void;
 }
 
 export const StateA_Dashboard: React.FC<StateADashboardProps> = ({
@@ -33,6 +35,8 @@ export const StateA_Dashboard: React.FC<StateADashboardProps> = ({
   isOnline,
   timeFormat = '12h',
   language = 'en',
+  indoorData,
+  onOpenSettings,
 }) => {
   return (
     <div className="h-full w-full grid grid-cols-12 gap-5 p-2">
@@ -50,12 +54,14 @@ export const StateA_Dashboard: React.FC<StateADashboardProps> = ({
           />
         </div>
 
-        {/* 下部: 天気 */}
+        {/* 下部: 天気 + 室内温湿度 */}
         <div className="h-56 sm:h-64">
           <WeatherWidget
             weather={weather}
             isLoading={isWeatherLoading}
             language={language}
+            indoorData={indoorData}
+            onOpenSettings={onOpenSettings}
           />
         </div>
       </div>

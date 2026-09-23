@@ -101,3 +101,15 @@ export interface PixelShiftOffset {
   x: number;
   y: number;
 }
+
+// ------------------------------------------------------------------------------
+// SwitchBot 温湿度計データ型
+// ------------------------------------------------------------------------------
+export interface SwitchBotMeterData {
+  temperature: number; // 室温 (℃)
+  humidity: number;    // 湿度 (%)
+  battery?: number;    // バッテリー残量 (%)
+  deviceName?: string; // デバイス名 (例: "デスク温湿度計")
+  updatedAt: string;
+}
+

@@ -13,13 +13,17 @@ import {
   Wind,
   ArrowUp,
   ArrowDown,
+  Home,
+  Thermometer,
 } from 'lucide-react';
-import { WeatherData } from '@/types';
+import { WeatherData, SwitchBotMeterData } from '@/types';
 
 interface WeatherWidgetProps {
   weather: WeatherData | null;
   isLoading?: boolean;
   language?: 'en' | 'ja';
+  indoorData?: SwitchBotMeterData | null;
+  onOpenSettings?: () => void;
 }
 
 // 英語の天候説明マッピング
@@ -62,6 +66,8 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   weather,
   isLoading = false,
   language = 'en',
+  indoorData,
+  onOpenSettings,
 }) => {
   if (isLoading && !weather) {
     return (
@@ -99,7 +105,37 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
             {weatherText}
           </span>
         </div>
-        <div className="flex items-center gap-3 text-xs text-slate-300">
+        <div className="flex items-center gap-2.5 text-xs text-slate-300">
+          {/* SwitchBot 室内温湿度表示 (連携時) */}
+          {indoorData ? (
+            <div
+              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full liquid-glass-pill border border-emerald-400/30 bg-emerald-500/10 text-emerald-300 animate-fadeIn"
+              title={`${indoorData.deviceName || '室内'}: ${indoorData.temperature}°C / ${indoorData.humidity}%`}
+            >
+              <Home className="w-3 h-3 text-emerald-400 shrink-0" />
+              <span className="text-[10px] font-bold tracking-wider hidden sm:inline">
+                {language === 'en' ? 'INDOOR' : '室内'}
+              </span>
+              <span className="font-mono font-bold text-white">
+                {indoorData.temperature.toFixed(1)}°
+              </span>
+              <span className="text-emerald-200/80 font-mono text-[11px]">
+                {indoorData.humidity}%
+              </span>
+            </div>
+          ) : (
+            onOpenSettings && (
+              <button
+                onClick={onOpenSettings}
+                className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full liquid-glass-pill text-[10px] text-slate-400 hover:text-slate-200 transition-all border border-white/5 hover:border-white/15 cursor-pointer"
+                title="SwitchBot温湿度計を連携して室温を表示"
+              >
+                <Home className="w-2.5 h-2.5 text-slate-400" />
+                <span>+ 室内温湿度</span>
+              </button>
+            )
+          )}
+
           <div className="flex items-center gap-1">
             <ArrowUp className="w-3 h-3 text-rose-400" />
             <span className="font-mono text-slate-100">{weather.tempMax}°</span>
