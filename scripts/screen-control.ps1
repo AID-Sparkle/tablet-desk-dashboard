@@ -28,7 +28,7 @@ if ((Test-Path $EnvFile) -and (-not $TabletIp -or -not $Password)) {
         if ($line -notmatch "^#" -and $line -match "^([^=]+)=(.*)$") {
             $key = $matches[1].Trim()
             $val = $matches[2].Trim().Trim('"').Trim("'")
-            if ($key -eq "FULLY_KIOSK_IP" -and -not $TabletIp) { $TabletIp = $val }
+            if (($key -eq "FULLY_KIOSK_IP" -or $key -eq "FULLY_KIOSK_HOST") -and -not $TabletIp) { $TabletIp = $val }
             if ($key -eq "FULLY_KIOSK_PASSWORD" -and -not $Password) { $Password = $val }
         }
     }
