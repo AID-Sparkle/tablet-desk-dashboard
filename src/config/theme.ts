@@ -81,7 +81,7 @@ export const THEME_COLORS: Record<ThemeColorId, ThemeColorConfig> = {
   },
 };
 
-export type BackgroundStyleId = 'orbs' | 'nature' | 'city' | 'minimal' | 'video' | 'custom';
+export type BackgroundStyleId = 'orbs' | 'unsplash_daily' | 'nature' | 'city' | 'minimal' | 'custom';
 
 export interface BackgroundPreset {
   id: BackgroundStyleId;
@@ -98,6 +98,12 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     name: 'Ambient Orbs',
     nameJa: '有機的オーブ（標準）',
     previewGradient: 'from-cyan-950 via-purple-950 to-slate-950',
+  },
+  {
+    id: 'unsplash_daily',
+    name: 'Unsplash Daily (Auto)',
+    nameJa: '日替わり風景 (Unsplash)',
+    previewGradient: 'from-emerald-950 via-teal-950 to-slate-950',
   },
   {
     id: 'nature',
@@ -121,17 +127,9 @@ export const BACKGROUND_PRESETS: BackgroundPreset[] = [
     previewGradient: 'from-slate-900 via-zinc-900 to-black',
   },
   {
-    id: 'video',
-    name: 'Deep Space Loop (MP4)',
-    nameJa: '宇宙・星雲ループ (動画 MP4)',
-    url: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-    isVideo: true,
-    previewGradient: 'from-indigo-950 via-purple-950 to-black',
-  },
-  {
     id: 'custom',
-    name: 'Custom Wallpaper (MP4 / Image)',
-    nameJa: 'PC壁紙 / MP4動画 / カスタムURL',
+    name: 'Custom (Local MP4 / Image)',
+    nameJa: 'ローカル動画一覧 / PC壁紙',
     previewGradient: 'from-slate-800 to-slate-950',
   },
 ];

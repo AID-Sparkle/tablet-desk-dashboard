@@ -25,6 +25,9 @@ import {
   Image as ImageIcon,
   Sparkles,
   Film,
+  FolderOpen,
+  RefreshCw,
+  Check,
 } from 'lucide-react';
 import { PixelShifter } from '@/components/PixelShifter';
 import { StateA_Dashboard } from '@/components/StateA_Dashboard';
@@ -39,6 +42,8 @@ import {
   BackgroundStyleId,
   isVideoSource,
 } from '@/config/theme';
+import type { LocalWallpaperItem } from '@/app/api/wallpapers/route';
+import type { UnsplashDailyWallpaper } from '@/app/api/unsplash-daily/route';
 import {
   ViewMode,
   WeatherData,
@@ -75,6 +80,13 @@ export default function DashboardPage() {
   // 新機能: 背景スタイル (デフォルト: orbs)
   const [backgroundStyle, setBackgroundStyle] = useState<BackgroundStyleId>('orbs');
   const [customWallpaperUrl, setCustomWallpaperUrl] = useState<string>('');
+
+  // 新機能: Unsplash日替わり写真データ
+  const [unsplashDaily, setUnsplashDaily] = useState<UnsplashDailyWallpaper | null>(null);
+
+  // 新機能: public/ 内の動画・壁紙ファイル一覧
+  const [localWallpapers, setLocalWallpapers] = useState<LocalWallpaperItem[]>([]);
+  const [isLoadingLocalWallpapers, setIsLoadingLocalWallpapers] = useState<boolean>(false);
 
   // 画面下部ミニ時計用
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
@@ -337,6 +349,35 @@ export default function DashboardPage() {
     }
   };
 
+  // Unsplash日替わり写真の取得
+  const fetchUnsplashDaily = useCallback(async () => {
+    try {
+      const res = await fetch('/api/unsplash-daily');
+      if (res.ok) {
+        const data = await res.json();
+        setUnsplashDaily(data);
+      }
+    } catch (e) {
+      console.error('Failed to fetch Unsplash daily wallpaper:', e);
+    }
+  }, []);
+
+  // ローカル動画・壁紙一覧の取得 (public/ フォルダ内をスキャン)
+  const fetchLocalWallpapers = useCallback(async () => {
+    setIsLoadingLocalWallpapers(true);
+    try {
+      const res = await fetch('/api/wallpapers');
+      if (res.ok) {
+        const data = await res.json();
+        setLocalWallpapers(data.wallpapers || []);
+      }
+    } catch (e) {
+      console.error('Failed to fetch local wallpapers:', e);
+    } finally {
+      setIsLoadingLocalWallpapers(false);
+    }
+  }, []);
+
   // ----------------------------------------------------------------------------
   // 4. 初回取得 & 定期ポーリング
   // ----------------------------------------------------------------------------
@@ -344,6 +385,8 @@ export default function DashboardPage() {
     fetchWeather();
     fetchNews();
     fetchSpotifyNowPlaying();
+    fetchUnsplashDaily();
+    fetchLocalWallpapers();
 
     const weatherTimer = setInterval(() => fetchWeather(), DASHBOARD_CONFIG.weather.refreshIntervalMs);
     const newsTimer = setInterval(fetchNews, DASHBOARD_CONFIG.rss.refreshIntervalMs);
@@ -424,7 +467,11 @@ export default function DashboardPage() {
   // アクティブな背景プリセット
   const activeBgPreset = BACKGROUND_PRESETS.find((p) => p.id === backgroundStyle);
   const activeWallpaperUrl =
-    backgroundStyle === 'custom' ? customWallpaperUrl : activeBgPreset?.url;
+    backgroundStyle === 'custom'
+      ? customWallpaperUrl
+      : backgroundStyle === 'unsplash_daily'
+      ? (unsplashDaily?.url || 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=2560&q=80')
+      : activeBgPreset?.url;
 
   const handleUpdateInterval = (sec: number) => {
     setAutoRotationInterval(sec);
@@ -1058,8 +1105,10 @@ export default function DashboardPage() {
                         }
                       >
                         <div className="flex items-center gap-2 min-w-0">
-                          {preset.isVideo ? (
-                            <Film className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          {preset.id === 'custom' ? (
+                            <FolderOpen className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                          ) : preset.id === 'unsplash_daily' ? (
+                            <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
                           ) : (
                             <span
                               className={`w-3.5 h-3.5 rounded-full bg-gradient-to-br ${preset.previewGradient} shrink-0 border border-white/20`}
@@ -1080,38 +1129,169 @@ export default function DashboardPage() {
                   })}
                 </div>
 
-                {/* カスタムURL入力欄 (custom選択時) */}
-                {backgroundStyle === 'custom' && (
-                  <div className="mt-3 pt-3 border-t border-white/10 space-y-2">
-                    <label className="text-xs text-slate-300 block font-medium">
-                      カスタム壁紙（MP4動画 / 画像）のURLまたはパス:
-                    </label>
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        value={customWallpaperUrl}
-                        onChange={(e) => handleUpdateCustomWallpaper(e.target.value)}
-                        placeholder="/my-wallpaper.mp4 または https://.../wallpaper.mp4"
-                        className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3.5 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
-                      />
-                      {customWallpaperUrl && (
-                        <button
-                          onClick={() => handleUpdateCustomWallpaper('')}
-                          className="px-2.5 py-2 rounded-xl text-xs bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all shrink-0"
-                        >
-                          クリア
-                        </button>
-                      )}
+                {/* 1. Unsplash日替わり写真 情報カード (unsplash_daily選択時) */}
+                {backgroundStyle === 'unsplash_daily' && (
+                  <div className="mt-3 pt-3 border-t border-white/10 space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                        <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                        本日のUnsplash日替わり風景
+                      </span>
+                      <button
+                        onClick={fetchUnsplashDaily}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] liquid-glass-pill text-slate-300 hover:text-white transition-all cursor-pointer"
+                        title="日替わり壁紙を更新"
+                      >
+                        <RefreshCw className="w-3 h-3 text-emerald-400" />
+                        <span>更新</span>
+                      </button>
                     </div>
 
-                    <div className="p-3 rounded-xl bg-cyan-950/20 border border-cyan-500/20 text-[11px] text-slate-300 space-y-1">
-                      <p className="font-semibold text-cyan-300 flex items-center gap-1.5">
-                        <Film className="w-3.5 h-3.5" />
-                        PCのWallpaper Engine録画動画（MP4）を使う方法:
-                      </p>
-                      <p className="text-slate-400 leading-relaxed">
-                        録画したMP4ファイルを、プロジェクトの <code className="text-cyan-200 bg-white/10 px-1 py-0.5 rounded font-mono">public/</code> フォルダ（例: <code className="text-cyan-200 bg-white/10 px-1 py-0.5 rounded font-mono">public/my-wallpaper.mp4</code>）に置くだけで、上記入力欄に <code className="text-cyan-200 bg-white/10 px-1 py-0.5 rounded font-mono">/my-wallpaper.mp4</code> と入力すれば自動で超滑らかにループ再生されます！
-                      </p>
+                    {unsplashDaily ? (
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/10 flex items-center gap-3">
+                        <div className="relative w-16 h-12 rounded-lg overflow-hidden shrink-0 border border-white/15">
+                          <img
+                            src={unsplashDaily.url}
+                            alt={unsplashDaily.title}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-white truncate">
+                            {unsplashDaily.title}
+                          </p>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            Photo by{' '}
+                            <span className="text-emerald-300 font-medium">
+                              {unsplashDaily.photographer}
+                            </span>{' '}
+                            on Unsplash
+                          </p>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            毎日深夜0時に自動で新しい風景に切り替わります
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-slate-400">本日の壁紙を読み込み中...</p>
+                    )}
+                  </div>
+                )}
+
+                {/* 2. ローカル動画・画像一覧 (custom選択時: 一覧から選ぶだけで適用) */}
+                {backgroundStyle === 'custom' && (
+                  <div className="mt-3 pt-3 border-t border-white/10 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <FolderOpen className="w-3.5 h-3.5 text-cyan-400" />
+                        <span className="text-xs font-semibold text-white">
+                          ローカル動画・壁紙一覧 (public/ フォルダ内)
+                        </span>
+                      </div>
+                      <button
+                        onClick={fetchLocalWallpapers}
+                        disabled={isLoadingLocalWallpapers}
+                        className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] liquid-glass-pill text-cyan-300 hover:text-white transition-all cursor-pointer disabled:opacity-50"
+                        title="フォルダ内を再スキャン"
+                      >
+                        <RefreshCw className={`w-3 h-3 ${isLoadingLocalWallpapers ? 'animate-spin' : ''}`} />
+                        <span>再スキャン</span>
+                      </button>
+                    </div>
+
+                    {/* ファイル一覧リスト（クリックするだけで即座に選択） */}
+                    {localWallpapers.length > 0 ? (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
+                        {localWallpapers.map((file) => {
+                          const isSelected = customWallpaperUrl === file.url;
+                          return (
+                            <button
+                              key={file.url}
+                              onClick={() => handleUpdateCustomWallpaper(file.url)}
+                              className={`flex items-center justify-between p-2.5 rounded-xl border transition-all text-left cursor-pointer group ${
+                                isSelected
+                                  ? 'liquid-glass text-white font-bold shadow-md'
+                                  : 'bg-white/5 border-white/10 hover:bg-white/10 text-slate-300 hover:text-white'
+                              }`}
+                              style={
+                                isSelected
+                                  ? {
+                                      borderColor: 'var(--theme-accent, #22d3ee)',
+                                      boxShadow: '0 0 12px var(--theme-accent-glow, rgba(34, 211, 238, 0.4))',
+                                    }
+                                  : {}
+                              }
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                <div
+                                  className="p-1.5 rounded-lg shrink-0"
+                                  style={{
+                                    backgroundColor: isSelected
+                                      ? 'var(--theme-accent-dim, rgba(34, 211, 238, 0.15))'
+                                      : 'rgba(255,255,255,0.06)',
+                                    color: isSelected ? 'var(--theme-accent, #22d3ee)' : 'inherit',
+                                  }}
+                                >
+                                  {file.type === 'video' ? (
+                                    <Film className="w-3.5 h-3.5 text-cyan-400" />
+                                  ) : (
+                                    <ImageIcon className="w-3.5 h-3.5 text-emerald-400" />
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-xs font-mono truncate">{file.name}</p>
+                                  <p className="text-[10px] text-slate-400">
+                                    {file.type === 'video' ? 'MP4動画 (ループ)' : '画像'} • {file.sizeFormatted}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {isSelected && (
+                                <div
+                                  className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 ml-1.5"
+                                  style={{ backgroundColor: 'var(--theme-accent, #22d3ee)', color: '#000' }}
+                                >
+                                  <Check className="w-2.5 h-2.5 stroke-[3]" />
+                                </div>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-xs text-slate-400 space-y-1">
+                        <p className="text-slate-300 font-semibold">📁 動画・画像ファイルがまだ見つかりません</p>
+                        <p className="text-[11px] leading-relaxed">
+                          PCのWallpaper Engine録画動画（MP4）や画像を、以下のフォルダに置くと自動でここに表示されます：
+                        </p>
+                        <code className="block bg-black/40 p-1.5 rounded text-[10px] text-cyan-300 font-mono select-all">
+                          c:\school\tablet-desk-dashboard\public\
+                        </code>
+                      </div>
+                    )}
+
+                    {/* 手動URL入力欄 */}
+                    <div className="pt-2 border-t border-white/5 space-y-1.5">
+                      <label className="text-[11px] text-slate-400 block">
+                        または 外部URL/直接パスを指定:
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={customWallpaperUrl}
+                          onChange={(e) => handleUpdateCustomWallpaper(e.target.value)}
+                          placeholder="/my-wallpaper.mp4 または https://.../wallpaper.mp4"
+                          className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-400 font-mono"
+                        />
+                        {customWallpaperUrl && (
+                          <button
+                            onClick={() => handleUpdateCustomWallpaper('')}
+                            className="px-2.5 py-1.5 rounded-xl text-xs bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-all shrink-0 cursor-pointer"
+                          >
+                            クリア
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
