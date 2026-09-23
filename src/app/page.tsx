@@ -749,9 +749,9 @@ export default function DashboardPage() {
             </div>
           )}
 
-          {/* 【新機能】Spotify (State B) や NEWS (State C) 画面用: 下部ミニ時間＆天気・気温表示 */}
+          {/* 【新機能】Spotify (State B) や NEWS (State C) 画面用: 下部ミニ時間＆天気・気温表示 (見切れ完全防止スリム設計) */}
           {(viewMode === 'B' || viewMode === 'C') && (
-            <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-xl liquid-glass-pill border border-white/10 shrink-0 shadow-sm animate-fadeIn max-w-full overflow-hidden">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-xl liquid-glass-pill border border-white/10 shrink-0 shadow-sm animate-fadeIn">
               {/* 時計 (12h/24h対応) */}
               <div className="flex items-center gap-1 font-mono text-[11px] sm:text-xs font-bold text-white shrink-0">
                 <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" style={{ color: 'var(--theme-accent, #22d3ee)' }} />
@@ -768,31 +768,23 @@ export default function DashboardPage() {
                   <span className="font-semibold text-slate-100 tabular-nums">
                     {weather.currentTemp.toFixed(1)}°
                   </span>
-                  <span className="text-[10px] text-slate-400 hidden xl:inline">
-                    {weather.cityName}
-                  </span>
                 </div>
               ) : (
-                <span className="text-[10px] text-slate-400">--°</span>
+                <span className="text-[10px] text-slate-400 shrink-0">--°</span>
               )}
 
-              {/* SwitchBot 室内温湿度 (連携時) */}
+              {/* SwitchBot 室内温度 (ワイド画面のみ追加表示、タブレット等では見切れ防止のため非表示) */}
               {switchBotMeter && (
-                <>
-                  <span className="w-px h-3 bg-white/20 shrink-0" />
-                  <div
-                    className="flex items-center gap-1 text-[11px] sm:text-xs text-emerald-300 shrink-0"
-                    title={`室内: ${switchBotMeter.temperature}°C / ${switchBotMeter.humidity}%`}
-                  >
-                    <Home className="w-3 h-3 text-emerald-400" />
-                    <span className="font-semibold tabular-nums text-white">
-                      {switchBotMeter.temperature.toFixed(1)}°
-                    </span>
-                    <span className="text-[10px] text-emerald-200/80 hidden md:inline font-mono">
-                      {switchBotMeter.humidity}%
-                    </span>
-                  </div>
-                </>
+                <div
+                  className="hidden xl:flex items-center gap-1 text-[11px] text-emerald-300 shrink-0"
+                  title={`室内: ${switchBotMeter.temperature}°C / ${switchBotMeter.humidity}%`}
+                >
+                  <span className="w-px h-3 bg-white/20 mr-0.5" />
+                  <Home className="w-3 h-3 text-emerald-400" />
+                  <span className="font-semibold tabular-nums text-white">
+                    {switchBotMeter.temperature.toFixed(1)}°
+                  </span>
+                </div>
               )}
             </div>
           )}
