@@ -136,13 +136,9 @@ export default function DashboardPage() {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
 
-  // 再生割り込み検知用の前状態記録
-  const prevIsPlayingRef = useRef<boolean>(false);
-  const prevTrackIdRef = useRef<string | undefined>(undefined);
-  const isFirstLoadRef = useRef<boolean>(true);
-
-  // 自動回転タイマー管理用Ref
+  // 自動回転タイマー管理用Ref & 最新Spotify再生状態保持Ref
   const rotationTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isSpotifyPlayingRef = useRef<boolean>(false);
 
   // ----------------------------------------------------------------------------
   // 0. ローカルストレージ設定の読み込み
@@ -307,36 +303,12 @@ export default function DashboardPage() {
         setSpotifyStatus(data.status);
         const currentTrack = data.track || null;
         setSpotifyTrack(currentTrack);
-
-        // 【再生割り込み検知】
-        const nowPlaying = currentTrack?.isPlaying ?? false;
-        const nowTrackId = currentTrack?.id;
-
-        // 初回ロード時は状態保存のみ行い、State Aの初期表示を維持
-        if (isFirstLoadRef.current) {
-          isFirstLoadRef.current = false;
-          prevIsPlayingRef.current = nowPlaying;
-          prevTrackIdRef.current = nowTrackId;
-          return;
-        }
-
-        // 停止中から再生開始された瞬間、または再生中に曲が変わった瞬間にState Bへ遷移
-        const isStarted = !prevIsPlayingRef.current && nowPlaying;
-        const isTrackChanged = nowPlaying && nowTrackId && prevTrackIdRef.current && nowTrackId !== prevTrackIdRef.current;
-
-        if (isStarted || isTrackChanged) {
-          setViewMode('B');
-          applyNextPixelShift();
-        }
-
-        prevIsPlayingRef.current = nowPlaying;
-        prevTrackIdRef.current = nowTrackId;
       }
     } catch (e) {
       console.error('Spotify fetch error:', e);
       setSpotifyStatus('error');
     }
-  }, [applyNextPixelShift]);
+  }, []);
 
   // Spotify操作 (play, pause, next, previous)
   const handleSpotifyControl = async (command: 'play' | 'pause' | 'next' | 'previous') => {
@@ -485,7 +457,9 @@ export default function DashboardPage() {
   // ----------------------------------------------------------------------------
   // 5. 画面自動ローテーション (設定秒数きっちり維持するタイマー管理)
   // ----------------------------------------------------------------------------
-  const isSpotifyPlaying = Boolean(spotifyTrack && spotifyTrack.isPlaying);
+  useEffect(() => {
+    isSpotifyPlayingRef.current = Boolean(spotifyTrack && spotifyTrack.isPlaying);
+  }, [spotifyTrack?.isPlaying]);
 
   const resetRotationSchedule = useCallback(() => {
     if (rotationTimerRef.current) {
@@ -496,9 +470,10 @@ export default function DashboardPage() {
     rotationTimerRef.current = setInterval(() => {
       setViewMode((prev) => {
         let next: ViewMode = 'A';
+        const isPlaying = isSpotifyPlayingRef.current;
         // Spotifyで再生中の曲がない場合はState Bをスキップし、A ⇄ C のみ自動切替
         if (prev === 'A') {
-          next = isSpotifyPlaying ? 'B' : 'C';
+          next = isPlaying ? 'B' : 'C';
         } else if (prev === 'B') {
           next = 'C';
         } else if (prev === 'C') {
@@ -508,7 +483,7 @@ export default function DashboardPage() {
       });
       applyNextPixelShift();
     }, autoRotationInterval * 1000);
-  }, [isAutoRotationActive, autoRotationInterval, isSpotifyPlaying, applyNextPixelShift]);
+  }, [isAutoRotationActive, autoRotationInterval, applyNextPixelShift]);
 
   useEffect(() => {
     resetRotationSchedule();
