@@ -675,18 +675,18 @@ export default function DashboardPage() {
       {/* ========================================================================
           画面下部: iOSリキッドガラス ナビゲーション & 再生中ミニプレイヤーバー (固定高さ 62px)
       ======================================================================== */}
-      <footer className="relative z-30 h-[62px] liquid-glass border-x-0 border-b-0 border-t border-white/10 px-3 sm:px-6 flex items-center justify-between shrink-0">
+      <footer className="relative z-30 h-[62px] liquid-glass border-x-0 border-b-0 border-t border-white/10 px-2.5 sm:px-5 flex items-center justify-between shrink-0">
         {/* 左側: 再生中Spotifyミニプレイヤー または ミニ時計＆天気ピル */}
-        <div className="flex items-center gap-2.5 min-w-0 max-w-[calc(50%-180px)] z-10">
+        <div className="flex items-center gap-2 min-w-0 max-w-[calc(50%-135px)] sm:max-w-[calc(50%-150px)] z-10 overflow-hidden">
           {/* Spotify 再生中ミニプレイヤー (State B 以外のときに表示) */}
           {spotifyTrack && viewMode !== 'B' && (
             <div
               onClick={() => handleManualSwitch('B')}
-              className="flex items-center gap-2 p-1.5 pr-2.5 rounded-2xl liquid-glass-pill hover:bg-white/10 cursor-pointer transition-all max-w-[200px] sm:max-w-[260px] group shrink-0"
+              className="flex items-center gap-2 p-1 sm:p-1.5 pr-2 rounded-2xl liquid-glass-pill hover:bg-white/10 cursor-pointer transition-all max-w-[145px] sm:max-w-[200px] md:max-w-[260px] group shrink-0"
               title={language === 'en' ? 'Click to open Spotify full view' : 'クリックでSpotify大画面に切り替え'}
             >
               {/* サムネイル */}
-              <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-slate-800 shrink-0 border border-white/15">
+              <div className="relative w-7 h-7 sm:w-8 sm:h-8 rounded-lg overflow-hidden bg-slate-800 shrink-0 border border-white/15">
                 {spotifyTrack.albumArtUrl ? (
                   <img
                     src={spotifyTrack.albumArtUrl}
@@ -695,24 +695,24 @@ export default function DashboardPage() {
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-slate-400">
-                    <Music className="w-4 h-4" />
+                    <Music className="w-3.5 h-3.5" />
                   </div>
                 )}
               </div>
 
               {/* 曲名 & アーティスト */}
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-bold text-white truncate group-hover:text-emerald-300 transition-colors leading-tight">
+                <p className="text-[11px] sm:text-xs font-bold text-white truncate group-hover:text-emerald-300 transition-colors leading-tight">
                   {spotifyTrack.name}
                 </p>
-                <p className="text-[10px] text-slate-400 truncate leading-tight">
+                <p className="text-[9px] sm:text-[10px] text-slate-400 truncate leading-tight">
                   {spotifyTrack.artists}
                 </p>
               </div>
 
               {/* イコライザーバー (再生中のみ) */}
               {spotifyTrack.isPlaying && (
-                <div className="hidden sm:flex items-end gap-0.5 h-3 shrink-0 ml-1">
+                <div className="hidden md:flex items-end gap-0.5 h-3 shrink-0 ml-0.5">
                   <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-1" />
                   <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-2" />
                   <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-3" />
@@ -726,12 +726,12 @@ export default function DashboardPage() {
                   handleSpotifyControl(spotifyTrack.isPlaying ? 'pause' : 'play');
                 }}
                 disabled={isSpotifyControlling}
-                className="p-1 rounded-lg hover:bg-white/15 text-slate-200 hover:text-white transition-all ml-1 shrink-0"
+                className="p-1 rounded-lg hover:bg-white/15 text-slate-200 hover:text-white transition-all shrink-0"
               >
                 {spotifyTrack.isPlaying ? (
-                  <Pause className="w-3.5 h-3.5 fill-current" />
+                  <Pause className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
                 ) : (
-                  <Play className="w-3.5 h-3.5 fill-current" />
+                  <Play className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current" />
                 )}
               </button>
 
@@ -742,53 +742,53 @@ export default function DashboardPage() {
                   handleSpotifyControl('next');
                 }}
                 disabled={isSpotifyControlling}
-                className="p-1 rounded-lg hover:bg-white/15 text-slate-200 hover:text-white transition-all shrink-0"
+                className="hidden sm:block p-1 rounded-lg hover:bg-white/15 text-slate-200 hover:text-white transition-all shrink-0"
               >
-                <SkipForward className="w-3.5 h-3.5" />
+                <SkipForward className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
               </button>
             </div>
           )}
 
           {/* 【新機能】Spotify (State B) や NEWS (State C) 画面用: 下部ミニ時間＆天気・気温表示 */}
           {(viewMode === 'B' || viewMode === 'C') && (
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl liquid-glass-pill border border-white/10 shrink-0 shadow-sm animate-fadeIn">
+            <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-xl liquid-glass-pill border border-white/10 shrink-0 shadow-sm animate-fadeIn max-w-full overflow-hidden">
               {/* 時計 (12h/24h対応) */}
-              <div className="flex items-center gap-1.5 font-mono text-xs font-bold text-white">
-                <Clock className="w-3.5 h-3.5" style={{ color: 'var(--theme-accent, #22d3ee)' }} />
+              <div className="flex items-center gap-1 font-mono text-[11px] sm:text-xs font-bold text-white shrink-0">
+                <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" style={{ color: 'var(--theme-accent, #22d3ee)' }} />
                 <span>{formatMiniTime()}</span>
               </div>
 
               {/* 区切りバー */}
-              <span className="w-px h-3.5 bg-white/20" />
+              <span className="w-px h-3 bg-white/20 shrink-0" />
 
               {/* 天気アイコン & 気温 */}
               {weather ? (
-                <div className="flex items-center gap-1.5 text-xs">
+                <div className="flex items-center gap-1 text-[11px] sm:text-xs shrink-0">
                   {getSmallWeatherIcon(weather.weatherCode)}
                   <span className="font-semibold text-slate-100 tabular-nums">
-                    {weather.currentTemp.toFixed(1)}°C
+                    {weather.currentTemp.toFixed(1)}°
                   </span>
-                  <span className="text-[10px] text-slate-400 hidden lg:inline">
+                  <span className="text-[10px] text-slate-400 hidden xl:inline">
                     {weather.cityName}
                   </span>
                 </div>
               ) : (
-                <span className="text-[10px] text-slate-400">--°C</span>
+                <span className="text-[10px] text-slate-400">--°</span>
               )}
 
               {/* SwitchBot 室内温湿度 (連携時) */}
               {switchBotMeter && (
                 <>
-                  <span className="w-px h-3.5 bg-white/20" />
+                  <span className="w-px h-3 bg-white/20 shrink-0" />
                   <div
-                    className="flex items-center gap-1 text-xs text-emerald-300"
+                    className="flex items-center gap-1 text-[11px] sm:text-xs text-emerald-300 shrink-0"
                     title={`室内: ${switchBotMeter.temperature}°C / ${switchBotMeter.humidity}%`}
                   >
                     <Home className="w-3 h-3 text-emerald-400" />
                     <span className="font-semibold tabular-nums text-white">
                       {switchBotMeter.temperature.toFixed(1)}°
                     </span>
-                    <span className="text-[10px] text-emerald-200/80 hidden sm:inline font-mono">
+                    <span className="text-[10px] text-emerald-200/80 hidden md:inline font-mono">
                       {switchBotMeter.humidity}%
                     </span>
                   </div>
@@ -799,25 +799,25 @@ export default function DashboardPage() {
 
           {/* State A かつ Spotify非再生時: ネットワーク・ピクセルシフト情報 */}
           {viewMode === 'A' && !spotifyTrack && (
-            <div className="flex items-center gap-2.5">
-              <div className="flex items-center gap-2 text-xs text-slate-300 liquid-glass-pill px-3 py-1 rounded-full">
+            <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 text-xs text-slate-300 liquid-glass-pill px-2.5 py-1 rounded-full">
                 {isOnline ? (
                   <>
-                    <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                    <span className="hidden sm:inline font-mono">ONLINE</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <span className="hidden sm:inline font-mono text-[11px]">ONLINE</span>
                     <Wifi className="w-3 h-3 text-emerald-400 sm:hidden" />
                   </>
                 ) : (
                   <>
-                    <span className="w-2 h-2 rounded-full bg-rose-400" />
-                    <span className="hidden sm:inline font-mono text-rose-300">OFFLINE</span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                    <span className="hidden sm:inline font-mono text-[11px] text-rose-300">OFFLINE</span>
                     <WifiOff className="w-3 h-3 text-rose-400 sm:hidden" />
                   </>
                 )}
               </div>
 
               <div
-                className="hidden lg:flex items-center gap-1.5 text-[10px] text-slate-300 liquid-glass-pill px-2.5 py-1 rounded-full"
+                className="hidden xl:flex items-center gap-1.5 text-[10px] text-slate-300 liquid-glass-pill px-2.5 py-1 rounded-full"
                 title={`Pixel Shift: x=${pixelOffset.x}px, y=${pixelOffset.y}px`}
               >
                 <ShieldCheck
@@ -830,12 +830,12 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* 中央: 画面切り替えタブ (完全中央固定: 左右要素の幅変化に影響されない) */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1.5 liquid-glass-pill p-1 rounded-2xl shadow-lg z-20">
+        {/* 中央: 画面切り替えタブ (中央固定・スリム化で左右との衝突を完全防止) */}
+        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 sm:gap-1.5 liquid-glass-pill p-1 rounded-2xl shadow-lg z-20">
           <button
             id="tab-main"
             onClick={() => handleManualSwitch('A')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'A'
                 ? 'text-slate-950 shadow-md font-bold'
                 : 'text-slate-300 hover:text-white'
@@ -856,7 +856,7 @@ export default function DashboardPage() {
           <button
             id="tab-spotify"
             onClick={() => handleManualSwitch('B')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'B'
                 ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/30 font-bold'
                 : 'text-slate-300 hover:text-white'
@@ -869,7 +869,7 @@ export default function DashboardPage() {
           <button
             id="tab-news"
             onClick={() => handleManualSwitch('C')}
-            className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               viewMode === 'C'
                 ? 'bg-purple-500 text-slate-950 shadow-md shadow-purple-500/30 font-bold'
                 : 'text-slate-300 hover:text-white'

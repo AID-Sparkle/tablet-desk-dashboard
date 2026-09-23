@@ -86,24 +86,24 @@ export const SwitchBotWidget: React.FC<SwitchBotWidgetProps> = ({
     : null;
 
   return (
-    <div className="liquid-glass rounded-3xl p-5 flex flex-col justify-between h-full relative overflow-hidden group">
+    <div className="liquid-glass rounded-3xl p-3.5 sm:p-4 flex flex-col justify-between h-full relative overflow-hidden group">
       {/* 背景の微かなグロー */}
       <div className="absolute -top-12 -right-12 w-36 h-36 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
 
       {/* ヘッダー */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold tracking-wide text-emerald-300 liquid-glass-pill px-3 py-1 rounded-full flex items-center gap-1.5 border border-emerald-400/20">
+          <span className="text-[11px] sm:text-xs font-semibold tracking-wide text-emerald-300 liquid-glass-pill px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full flex items-center gap-1.5 border border-emerald-400/20">
             <Home className="w-3.5 h-3.5 text-emerald-400" />
             <span>{language === 'en' ? 'INDOOR' : '室内環境'}</span>
           </span>
-          <span className="text-xs text-slate-300 font-medium truncate max-w-[120px]">
+          <span className="text-xs text-slate-300 font-medium truncate max-w-[100px] sm:max-w-[120px]">
             {meterData?.deviceName || 'SwitchBot'}
           </span>
         </div>
 
         {comfort ? (
-          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${comfort.color} animate-fadeIn`}>
+          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${comfort.color} animate-fadeIn`}>
             {comfort.label}
           </span>
         ) : (
@@ -120,23 +120,23 @@ export const SwitchBotWidget: React.FC<SwitchBotWidgetProps> = ({
 
       {/* メイン温湿度表示 (特大でくっきり) */}
       {meterData ? (
-        <div className="my-2 flex items-center justify-between">
+        <div className="my-1 sm:my-1.5 flex items-center justify-between">
           {/* 室温 */}
           <div className="flex items-baseline">
-            <span className="text-5xl sm:text-6xl font-extrabold font-mono text-white tracking-tight drop-shadow-sm">
+            <span className="text-4xl sm:text-5xl font-extrabold font-mono text-white tracking-tight drop-shadow-sm">
               {meterData.temperature.toFixed(1)}
             </span>
-            <span className="text-2xl sm:text-3xl font-light text-emerald-300 ml-1">°C</span>
+            <span className="text-xl sm:text-2xl font-light text-emerald-300 ml-1">°C</span>
           </div>
 
           {/* 湿度 */}
-          <div className="flex items-center gap-2 px-3 py-2 rounded-2xl liquid-glass-pill border border-white/10">
-            <Droplets className="w-5 h-5 text-cyan-400 shrink-0" />
+          <div className="flex items-center gap-2 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-xl liquid-glass-pill border border-white/10">
+            <Droplets className="w-4 h-4 text-cyan-400 shrink-0" />
             <div>
-              <span className="text-[10px] text-slate-400 block leading-tight">
+              <span className="text-[9px] sm:text-[10px] text-slate-400 block leading-tight">
                 {language === 'en' ? 'Humidity' : '湿度'}
               </span>
-              <span className="font-mono text-xl font-bold text-slate-100">
+              <span className="font-mono text-base sm:text-lg font-bold text-slate-100">
                 {meterData.humidity}
                 <span className="text-xs font-normal text-slate-400 ml-0.5">%</span>
               </span>

@@ -91,58 +91,28 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
   const weatherText = language === 'en' ? getWeatherDescEn(weather.weatherDescription) : weather.weatherDescription;
 
   return (
-    <div className="liquid-glass rounded-3xl p-5 flex flex-col justify-between h-full relative overflow-hidden group">
+    <div className="liquid-glass rounded-3xl p-3.5 sm:p-4 flex flex-col justify-between h-full relative overflow-hidden group">
       {/* 背景の微かな天候グロー */}
       <div className="absolute -top-10 -right-10 w-36 h-36 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
 
       {/* ヘッダー: 地名と天候 */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-semibold tracking-wide text-slate-200 liquid-glass-pill px-3 py-1 rounded-full">
+          <span className="text-[11px] sm:text-xs font-semibold tracking-wide text-slate-200 liquid-glass-pill px-2.5 py-0.5 sm:px-3 sm:py-1 rounded-full">
             {weather.cityName}
           </span>
           <span className="text-xs text-slate-300 font-medium">
             {weatherText}
           </span>
         </div>
-        <div className="flex items-center gap-2.5 text-xs text-slate-300">
-          {/* SwitchBot 室内温湿度表示 (連携時) */}
-          {indoorData ? (
-            <div
-              className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full liquid-glass-pill border border-emerald-400/30 bg-emerald-500/10 text-emerald-300 animate-fadeIn"
-              title={`${indoorData.deviceName || '室内'}: ${indoorData.temperature}°C / ${indoorData.humidity}%`}
-            >
-              <Home className="w-3 h-3 text-emerald-400 shrink-0" />
-              <span className="text-[10px] font-bold tracking-wider hidden sm:inline">
-                {language === 'en' ? 'INDOOR' : '室内'}
-              </span>
-              <span className="font-mono font-bold text-white">
-                {indoorData.temperature.toFixed(1)}°
-              </span>
-              <span className="text-emerald-200/80 font-mono text-[11px]">
-                {indoorData.humidity}%
-              </span>
-            </div>
-          ) : (
-            onOpenSettings && (
-              <button
-                onClick={onOpenSettings}
-                className="hidden sm:flex items-center gap-1 px-2 py-0.5 rounded-full liquid-glass-pill text-[10px] text-slate-400 hover:text-slate-200 transition-all border border-white/5 hover:border-white/15 cursor-pointer"
-                title="SwitchBot温湿度計を連携して室温を表示"
-              >
-                <Home className="w-2.5 h-2.5 text-slate-400" />
-                <span>+ 室内温湿度</span>
-              </button>
-            )
-          )}
-
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2 text-xs text-slate-300">
+          <div className="flex items-center gap-0.5">
             <ArrowUp className="w-3 h-3 text-rose-400" />
-            <span className="font-mono text-slate-100">{weather.tempMax}°</span>
+            <span className="font-mono text-slate-100 text-xs">{weather.tempMax}°</span>
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             <ArrowDown className="w-3 h-3 text-cyan-400" />
-            <span className="font-mono text-slate-100">{weather.tempMin}°</span>
+            <span className="font-mono text-slate-100 text-xs">{weather.tempMin}°</span>
           </div>
         </div>
       </div>
@@ -150,15 +120,15 @@ export const WeatherWidget: React.FC<WeatherWidgetProps> = ({
       {/* メイン気温表示 */}
       <div className="flex items-center justify-between my-1">
         <div className="flex items-baseline">
-          <span className="text-5xl sm:text-6xl font-extrabold font-mono text-white tracking-tight drop-shadow-sm">
+          <span className="text-4xl sm:text-5xl font-extrabold font-mono text-white tracking-tight drop-shadow-sm">
             {weather.currentTemp}
           </span>
-          <span className="text-2xl sm:text-3xl font-light text-cyan-300 ml-1">°C</span>
-          <span className="text-xs text-slate-400 ml-3">
-            {language === 'en' ? 'Feels like' : '体感'} {weather.apparentTemp}°
+          <span className="text-xl sm:text-2xl font-light text-cyan-300 ml-1">°C</span>
+          <span className="text-[11px] text-slate-400 ml-2 sm:ml-3">
+            {language === 'en' ? 'Feels' : '体感'} {weather.apparentTemp}°
           </span>
         </div>
-        <div className="p-3 rounded-2xl liquid-glass-pill shadow-inner">
+        <div className="p-2 sm:p-2.5 rounded-2xl liquid-glass-pill shadow-inner">
           {getWeatherIcon(weather.weatherCode, weather.isDay)}
         </div>
       </div>

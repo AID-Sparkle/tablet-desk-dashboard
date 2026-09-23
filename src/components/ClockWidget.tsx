@@ -146,35 +146,35 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
           </div>
         )}
 
-        {/* 巨大デジタル時分秒 */}
+        {/* 巨大デジタル時分秒 (bg-clip-textの反転バグを解消し、常に純白で鮮明に発光) */}
         <div className="flex items-baseline tracking-tight select-none">
-          <span className="font-mono text-7xl sm:text-8xl md:text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-slate-400 drop-shadow-sm">
+          <span className="font-mono text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white drop-shadow-[0_2px_12px_rgba(255,255,255,0.25)]">
             {hoursStr}
           </span>
           <span
-            className="font-mono text-6xl sm:text-7xl md:text-8xl font-light mx-1 sm:mx-2 animate-pulse"
+            className="font-mono text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-light mx-1 sm:mx-2 animate-pulse select-none"
             style={{ color: 'var(--theme-accent, #22d3ee)' }}
           >
             :
           </span>
-          <span className="font-mono text-7xl sm:text-8xl md:text-9xl font-extrabold text-transparent bg-clip-text bg-gradient-to-br from-white via-slate-100 to-slate-400 drop-shadow-sm">
+          <span className="font-mono text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black text-white drop-shadow-[0_2px_12px_rgba(255,255,255,0.25)]">
             {minutesStr}
           </span>
-          <div className="ml-3 sm:ml-4 flex flex-col items-start font-mono">
+          <div className="ml-2.5 sm:ml-4 flex flex-col items-start font-mono">
             <span
-              className="text-2xl sm:text-3xl font-bold tabular-nums"
+              className="text-xl sm:text-2xl md:text-3xl font-bold tabular-nums"
               style={{ color: 'var(--theme-accent, #22d3ee)' }}
             >
               {secondsStr}
             </span>
-            <span className="text-[10px] tracking-widest text-slate-400 uppercase font-semibold">
+            <span className="text-[9px] sm:text-[10px] tracking-widest text-slate-400 uppercase font-semibold">
               SEC
             </span>
           </div>
         </div>
 
         {/* 日付・曜日 */}
-        <div className="mt-2 sm:mt-3 flex items-center gap-3 text-sm sm:text-base font-medium text-slate-300">
+        <div className="mt-1.5 sm:mt-2.5 flex items-center gap-2.5 text-xs sm:text-sm md:text-base font-medium text-slate-300">
           <span>{fullDateStr}</span>
           <span
             className={`px-2.5 py-0.5 rounded-lg text-xs font-semibold ${
@@ -190,9 +190,9 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
         </div>
       </div>
 
-      {/* 右側: iOSリキッドガラス アナログ時計 & Day Progress (空きスペースの超美麗ハイブリッド活用) */}
-      <div className="hidden sm:flex flex-col items-center justify-center shrink-0 pl-4 border-l border-white/10">
-        <div className="relative w-36 h-36 md:w-40 md:h-40 rounded-full liquid-glass flex items-center justify-center shadow-xl border border-white/15">
+      {/* 右側: iOSリキッドガラス アナログ時計 & Day Progress (タブレットの高さに合わせて最適化) */}
+      <div className="hidden sm:flex flex-col items-center justify-center shrink-0 pl-3 md:pl-4 border-l border-white/10">
+        <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full liquid-glass flex items-center justify-center shadow-xl border border-white/15">
           {/* 文字盤 12箇所のアワーマーカー */}
           {[...Array(12)].map((_, i) => {
             const rot = i * 30;
