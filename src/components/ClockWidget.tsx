@@ -192,80 +192,100 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
 
       {/* 右側: iOSリキッドガラス アナログ時計 & Day Progress (タブレットの高さに合わせて最適化) */}
       <div className="hidden sm:flex flex-col items-center justify-center shrink-0 pl-3 md:pl-4 border-l border-white/10">
-        <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full liquid-glass flex items-center justify-center shadow-xl border border-white/15" style={{ forcedColorAdjust: 'none' }}>
-          {/* 文字盤 12箇所のアワーマーカー */}
-          {[...Array(12)].map((_, i) => {
-            const rot = i * 30;
-            const isQuarter = i % 3 === 0;
-            return (
-              <div
-                key={i}
-                className="absolute inset-0 flex justify-center p-1.5 pointer-events-none"
-                style={{ transform: `rotate(${rot}deg)`, forcedColorAdjust: 'none' }}
-              >
-                <div
-                  className="rounded-full shadow-xs"
-                  style={{
-                    width: isQuarter ? '4px' : '2px',
-                    height: isQuarter ? '12px' : '6px',
-                    backgroundColor: isQuarter
-                      ? 'var(--theme-accent, #22d3ee)'
-                      : 'rgba(203, 213, 225, 0.75)',
-                    forcedColorAdjust: 'none',
-                  }}
+        <div
+          className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full liquid-glass flex items-center justify-center shadow-xl border border-white/15 overflow-hidden p-2"
+          style={{ colorScheme: 'only dark' }}
+        >
+          {/* SVG アナログ時計 (Android Chrome / MIUIのForce Dark Mode強制反転を完全防止し高DPIで美しく描画) */}
+          <svg
+            viewBox="0 0 100 100"
+            className="w-full h-full select-none"
+            style={{ colorScheme: 'only dark' }}
+          >
+            <defs>
+              <filter id="clock-hand-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.6" />
+              </filter>
+            </defs>
+
+            {/* 12箇所のアワーマーカー (メモリ) */}
+            {[...Array(12)].map((_, i) => {
+              const rot = i * 30;
+              const isQuarter = i % 3 === 0;
+              return (
+                <line
+                  key={i}
+                  x1="50"
+                  y1="5"
+                  x2="50"
+                  y2={isQuarter ? '15' : '11'}
+                  stroke={isQuarter ? 'var(--theme-accent, #22d3ee)' : '#ffffff'}
+                  strokeWidth={isQuarter ? '2.8' : '1.5'}
+                  strokeOpacity={isQuarter ? '1' : '0.9'}
+                  strokeLinecap="round"
+                  transform={`rotate(${rot} 50 50)`}
                 />
-              </div>
-            );
-          })}
+              );
+            })}
 
-          {/* 時針 */}
-          <div
-            className="absolute w-1.5 h-10 md:h-12 rounded-full origin-bottom shadow-lg border border-black/20"
-            style={{
-              bottom: '50%',
-              transform: `rotate(${hourDeg}deg)`,
-              transformOrigin: '50% 100%',
-              transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              backgroundColor: '#f8fafc',
-              forcedColorAdjust: 'none',
-            }}
-          />
+            {/* 時針 (純白・丸みのあるソリッド針) */}
+            <line
+              x1="50"
+              y1="54"
+              x2="50"
+              y2="26"
+              stroke="#ffffff"
+              strokeWidth="3.2"
+              strokeLinecap="round"
+              filter="url(#clock-hand-shadow)"
+              transform={`rotate(${hourDeg} 50 50)`}
+              style={{ transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            />
 
-          {/* 分針 */}
-          <div
-            className="absolute w-1 h-14 md:h-16 rounded-full origin-bottom shadow-lg border border-black/20"
-            style={{
-              bottom: '50%',
-              transform: `rotate(${minuteDeg}deg)`,
-              transformOrigin: '50% 100%',
-              transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-              backgroundColor: '#e2e8f0',
-              forcedColorAdjust: 'none',
-            }}
-          />
+            {/* 分針 (純白・高コントラスト長針) */}
+            <line
+              x1="50"
+              y1="55"
+              x2="50"
+              y2="16"
+              stroke="#ffffff"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              filter="url(#clock-hand-shadow)"
+              transform={`rotate(${minuteDeg} 50 50)`}
+              style={{ transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            />
 
-          {/* 秒針 (テーマカラーアクセント・スイープ風) */}
-          <div
-            className="absolute w-0.5 h-16 md:h-18 rounded-full origin-bottom shadow-sm"
-            style={{
-              bottom: '50%',
-              transform: `rotate(${secondDeg}deg)`,
-              transformOrigin: '50% 100%',
-              transition: 'transform 0.15s cubic-bezier(0.4, 2, 0.3, 1)',
-              backgroundColor: 'var(--theme-accent, #22d3ee)',
-              boxShadow: '0 0 8px var(--theme-accent-glow, rgba(34, 211, 238, 0.4))',
-              forcedColorAdjust: 'none',
-            }}
-          />
+            {/* 秒針 (テーマカラーアクセント・スイープ風) */}
+            <line
+              x1="50"
+              y1="58"
+              x2="50"
+              y2="12"
+              stroke="var(--theme-accent, #22d3ee)"
+              strokeWidth="1.2"
+              strokeLinecap="round"
+              transform={`rotate(${secondDeg} 50 50)`}
+              style={{ transition: 'transform 0.15s cubic-bezier(0.4, 2, 0.3, 1)' }}
+            />
 
-          {/* 針の中心ピボット */}
-          <div
-            className="relative z-10 w-3 h-3 rounded-full shadow-md border border-slate-900"
-            style={{
-              backgroundColor: 'var(--theme-accent, #22d3ee)',
-              forcedColorAdjust: 'none',
-            }}
-          />
+            {/* 針の中心ピボット外枠 (テーマカラー) */}
+            <circle
+              cx="50"
+              cy="50"
+              r="2.8"
+              fill="var(--theme-accent, #22d3ee)"
+              stroke="#0f172a"
+              strokeWidth="0.8"
+            />
+            {/* 針の中心ピボット内芯 (白コア) */}
+            <circle
+              cx="50"
+              cy="50"
+              r="1"
+              fill="#ffffff"
+            />
+          </svg>
         </div>
 
         {/* 下部: 1日の進捗ゲージ (Day Progress) */}

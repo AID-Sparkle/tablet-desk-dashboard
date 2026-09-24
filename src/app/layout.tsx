@@ -18,6 +18,7 @@ export const viewport: Viewport = {
   maximumScale: 1,
   userScalable: false,
   themeColor: "#06080e",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
@@ -26,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ja" className="h-full bg-[#06080e] overflow-hidden select-none">
-      <body className="h-full w-full bg-[#06080e] text-slate-100 overflow-hidden">
+    <html lang="ja" className="h-full bg-[#06080e] overflow-hidden select-none dark" style={{ colorScheme: 'dark' }}>
+      <body className="h-full w-full bg-[#06080e] text-slate-100 overflow-hidden" style={{ colorScheme: 'dark' }}>
         {children}
       </body>
     </html>
