@@ -1138,10 +1138,11 @@ export default function DashboardPage() {
                         }
                       >
                         <span
-                          className="w-4 h-4 rounded-full shrink-0 shadow-sm"
+                          className="w-4 h-4 rounded-full shrink-0 shadow-sm border border-white/25"
                           style={{
                             backgroundColor: theme.accent,
                             boxShadow: `0 0 8px ${theme.accentGlow}`,
+                            forcedColorAdjust: 'none',
                           }}
                         />
                         <div className="min-w-0 flex-1">

@@ -72,12 +72,12 @@ export const THEME_COLORS: Record<ThemeColorId, ThemeColorConfig> = {
     id: 'frost',
     name: 'Frost Silver',
     nameJa: 'フロストシルバー',
-    accent: '#e2e8f0',
-    accentDim: 'rgba(226, 232, 240, 0.15)',
-    accentBorder: 'rgba(226, 232, 240, 0.35)',
-    accentGlow: 'rgba(226, 232, 240, 0.4)',
-    buttonBg: 'bg-slate-200 text-slate-950',
-    badgeText: 'text-slate-200',
+    accent: '#93c5fd', // 氷晶のように発光するアイスプラチナシルバー (Android黒反転防止)
+    accentDim: 'rgba(147, 197, 253, 0.18)',
+    accentBorder: 'rgba(147, 197, 253, 0.45)',
+    accentGlow: 'rgba(147, 197, 253, 0.5)',
+    buttonBg: 'bg-blue-300 text-slate-950',
+    badgeText: 'text-blue-200',
   },
 };
 

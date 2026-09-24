@@ -192,7 +192,7 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
 
       {/* 右側: iOSリキッドガラス アナログ時計 & Day Progress (タブレットの高さに合わせて最適化) */}
       <div className="hidden sm:flex flex-col items-center justify-center shrink-0 pl-3 md:pl-4 border-l border-white/10">
-        <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full liquid-glass flex items-center justify-center shadow-xl border border-white/15">
+        <div className="relative w-28 h-28 sm:w-32 sm:h-32 md:w-36 md:h-36 rounded-full liquid-glass flex items-center justify-center shadow-xl border border-white/15" style={{ forcedColorAdjust: 'none' }}>
           {/* 文字盤 12箇所のアワーマーカー */}
           {[...Array(12)].map((_, i) => {
             const rot = i * 30;
@@ -201,16 +201,17 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
               <div
                 key={i}
                 className="absolute inset-0 flex justify-center p-1.5 pointer-events-none"
-                style={{ transform: `rotate(${rot}deg)` }}
+                style={{ transform: `rotate(${rot}deg)`, forcedColorAdjust: 'none' }}
               >
                 <div
-                  className="rounded-full"
+                  className="rounded-full shadow-xs"
                   style={{
                     width: isQuarter ? '4px' : '2px',
                     height: isQuarter ? '12px' : '6px',
                     backgroundColor: isQuarter
                       ? 'var(--theme-accent, #22d3ee)'
-                      : 'rgba(148, 163, 184, 0.6)',
+                      : 'rgba(203, 213, 225, 0.75)',
+                    forcedColorAdjust: 'none',
                   }}
                 />
               </div>
@@ -219,23 +220,27 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
 
           {/* 時針 */}
           <div
-            className="absolute w-1.5 h-10 md:h-12 bg-slate-100 rounded-full origin-bottom shadow-md"
+            className="absolute w-1.5 h-10 md:h-12 rounded-full origin-bottom shadow-lg border border-black/20"
             style={{
               bottom: '50%',
               transform: `rotate(${hourDeg}deg)`,
               transformOrigin: '50% 100%',
               transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              backgroundColor: '#f8fafc',
+              forcedColorAdjust: 'none',
             }}
           />
 
           {/* 分針 */}
           <div
-            className="absolute w-1 h-14 md:h-16 bg-slate-200 rounded-full origin-bottom shadow-md"
+            className="absolute w-1 h-14 md:h-16 rounded-full origin-bottom shadow-lg border border-black/20"
             style={{
               bottom: '50%',
               transform: `rotate(${minuteDeg}deg)`,
               transformOrigin: '50% 100%',
               transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+              backgroundColor: '#e2e8f0',
+              forcedColorAdjust: 'none',
             }}
           />
 
@@ -249,13 +254,17 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
               transition: 'transform 0.15s cubic-bezier(0.4, 2, 0.3, 1)',
               backgroundColor: 'var(--theme-accent, #22d3ee)',
               boxShadow: '0 0 8px var(--theme-accent-glow, rgba(34, 211, 238, 0.4))',
+              forcedColorAdjust: 'none',
             }}
           />
 
           {/* 針の中心ピボット */}
           <div
             className="relative z-10 w-3 h-3 rounded-full shadow-md border border-slate-900"
-            style={{ backgroundColor: 'var(--theme-accent, #22d3ee)' }}
+            style={{
+              backgroundColor: 'var(--theme-accent, #22d3ee)',
+              forcedColorAdjust: 'none',
+            }}
           />
         </div>
 

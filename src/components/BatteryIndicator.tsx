@@ -113,8 +113,8 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
   // 残量・充電状態に応じたスタイル設計 (黒背景でも圧倒的に見やすい高コントラスト設計)
   const getContainerStyle = () => {
     if (isCharging) {
-      // 充電中: 呼吸するように脈動する給電パルス発光
-      return 'bg-emerald-950/85 border-emerald-400/70 shadow-[0_0_16px_rgba(16,185,129,0.4)] animate-pulse';
+      // 充電中: 鮮やかなエメラルドガラス（親コンテナは点滅させず数字を安定点灯）
+      return 'bg-emerald-950/90 border-emerald-400/80 shadow-[0_0_14px_rgba(16,185,129,0.4)]';
     }
     if (level <= 20) {
       return 'bg-rose-950/85 border-rose-400/80 shadow-[0_0_14px_rgba(244,63,94,0.4)] animate-pulse';
@@ -179,12 +179,17 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
 
   return (
     <div
-      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border backdrop-blur-md shrink-0 select-none transition-all duration-300 ${getContainerStyle()} ${className}`}
+      className={`relative flex items-center gap-1.5 px-2.5 py-1 rounded-xl border backdrop-blur-md shrink-0 select-none transition-all duration-300 ${getContainerStyle()} ${className}`}
       style={{ forcedColorAdjust: 'none' }}
       title={tooltipText}
     >
+      {/* 充電中の呼吸グロー光彩（背後でパルス発光させ、文字や数字は一切点滅させない） */}
+      {isCharging && (
+        <div className="absolute -inset-0.5 rounded-xl bg-emerald-400/20 blur-xs animate-pulse pointer-events-none" />
+      )}
+
       {/* iOS風ミニバッテリーグラフィックゲージ (面で残量がわかる高視認性) */}
-      <div className="relative flex items-center shrink-0 mr-0.5" style={{ forcedColorAdjust: 'none' }}>
+      <div className="relative z-10 flex items-center shrink-0 mr-0.5" style={{ forcedColorAdjust: 'none' }}>
         {/* バッテリー本体外枠 */}
         <div
           className="relative w-[23px] h-[12px] rounded-[3.5px] border-[1.5px] p-[1px] flex items-center overflow-hidden"
@@ -203,7 +208,7 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
           {/* 【色以外の充電中判別ギミック1】充電中のみゲージ中央に白く刻印される⚡シンボル (実機スマホ仕様) */}
           {isCharging && (
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <Zap className="w-2.5 h-2.5 text-white fill-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] animate-pulse" />
+              <Zap className="w-2.5 h-2.5 text-white fill-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]" />
             </div>
           )}
         </div>
@@ -215,14 +220,14 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
         />
       </div>
 
-      {/* 残量パーセント (純白・高コントラスト・太字フォント) */}
-      <span className="font-mono tabular-nums text-xs font-black tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
+      {/* 残量パーセント (純白・高コントラスト・太字フォント: 充電中でも絶対に点滅しない安定表示) */}
+      <span className="relative z-10 font-mono tabular-nums text-xs font-black tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
         {level}%
       </span>
 
       {/* 【色以外の充電中判別ギミック2】充電中のみ数字の横に鮮やかなイエローの⚡マークがパルス点滅 */}
       {isCharging && (
-        <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse" />
+        <Zap className="relative z-10 w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse" />
       )}
     </div>
   );
