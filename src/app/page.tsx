@@ -29,11 +29,13 @@ import {
   RefreshCw,
   Check,
   Home,
+  BatteryCharging,
 } from 'lucide-react';
 import { PixelShifter } from '@/components/PixelShifter';
 import { StateA_Dashboard } from '@/components/StateA_Dashboard';
 import { StateB_SpotifyFocus } from '@/components/StateB_SpotifyFocus';
 import { StateC_NewsFocus } from '@/components/StateC_NewsFocus';
+import { BatteryIndicator } from '@/components/BatteryIndicator';
 import { getSmallWeatherIcon } from '@/components/WeatherWidget';
 import { DASHBOARD_CONFIG } from '@/config/dashboard';
 import {
@@ -83,6 +85,9 @@ export default function DashboardPage() {
   // 新機能: 背景スタイル (デフォルト: orbs)
   const [backgroundStyle, setBackgroundStyle] = useState<BackgroundStyleId>('orbs');
   const [customWallpaperUrl, setCustomWallpaperUrl] = useState<string>('');
+
+  // 新機能: バッテリー残量表示 (デフォルト: true)
+  const [showBatteryIndicator, setShowBatteryIndicator] = useState<boolean>(true);
 
   // 新機能: Unsplash日替わり写真データ
   const [unsplashDaily, setUnsplashDaily] = useState<UnsplashDailyWallpaper | null>(null);
@@ -183,6 +188,10 @@ export default function DashboardPage() {
       const savedCustomBg = localStorage.getItem('desk_custom_wallpaper');
       if (savedCustomBg) {
         setCustomWallpaperUrl(savedCustomBg);
+      }
+      const savedBattery = localStorage.getItem('desk_show_battery');
+      if (savedBattery !== null) {
+        setShowBatteryIndicator(savedBattery === 'true');
       }
     } catch {
       // ignore
@@ -514,6 +523,13 @@ export default function DashboardPage() {
     setLanguage(lang);
     try {
       localStorage.setItem('desk_language', lang);
+    } catch {}
+  };
+
+  const handleToggleBattery = (show: boolean) => {
+    setShowBatteryIndicator(show);
+    try {
+      localStorage.setItem('desk_show_battery', String(show));
     } catch {}
   };
 
@@ -872,8 +888,13 @@ export default function DashboardPage() {
           </button>
         </div>
 
-        {/* 右側: 自動ローテーショントグル & 設定 */}
-        <div className="flex items-center gap-2 z-10">
+        {/* 右側: 自動ローテーショントグル & バッテリー & 設定 */}
+        <div className="flex items-center gap-1.5 sm:gap-2 z-10 max-w-[calc(50%-135px)] sm:max-w-[calc(50%-150px)] justify-end">
+          {/* バッテリー残量インジケーター (対応端末でのみ表示) */}
+          {showBatteryIndicator && (
+            <BatteryIndicator language={language} />
+          )}
+
           {/* 自動回転 一時停止/再開 (設定秒数にリアルタイム連動) */}
           <button
             onClick={() => setIsAutoRotationActive(!isAutoRotationActive)}
@@ -1451,6 +1472,46 @@ export default function DashboardPage() {
                     }`}
                   >
                     日本語
+                  </button>
+                </div>
+              </div>
+
+              {/* 6.5. バッテリー残量の表示切替 */}
+              <div className="p-4 rounded-2xl liquid-glass-subtle flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-xl liquid-glass-pill text-emerald-400">
+                    <BatteryCharging className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="font-semibold text-white block">
+                      バッテリー残量の表示
+                    </span>
+                    <span className="text-xs text-slate-400">
+                      画面右下にタブレットの残バッテリー（%）と充電状態を表示
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 liquid-glass-pill p-1 rounded-xl">
+                  <button
+                    onClick={() => handleToggleBattery(true)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      showBatteryIndicator
+                        ? 'bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/25'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    ON
+                  </button>
+                  <button
+                    onClick={() => handleToggleBattery(false)}
+                    className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
+                      !showBatteryIndicator
+                        ? 'bg-rose-500 text-white font-bold shadow-md shadow-rose-500/25'
+                        : 'text-slate-300 hover:text-white'
+                    }`}
+                  >
+                    OFF
                   </button>
                 </div>
               </div>
