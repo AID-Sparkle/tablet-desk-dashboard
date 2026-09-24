@@ -127,16 +127,25 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
 
   const getGaugeColor = () => {
     if (isCharging) return 'bg-emerald-400';
-    if (level <= 20) return 'bg-rose-400';
+    if (level <= 20) return 'bg-rose-500';
     if (level <= 45) return 'bg-amber-400';
-    return 'bg-white';
+    // 通常時: Androidのダークモードで黒反転されない鮮やかな発光シアン
+    return 'bg-cyan-400';
   };
 
   const getGaugeBorderColor = () => {
-    if (isCharging) return 'border-emerald-400/90';
-    if (level <= 20) return 'border-rose-400/90';
-    if (level <= 45) return 'border-amber-400/90';
-    return 'border-white/90';
+    if (isCharging) return 'border-emerald-400/80';
+    if (level <= 20) return 'border-rose-400/80';
+    if (level <= 45) return 'border-amber-400/80';
+    // 通常時: シアン枠
+    return 'border-cyan-400/75';
+  };
+
+  const getTerminalColor = () => {
+    if (isCharging) return 'bg-emerald-400/80';
+    if (level <= 20) return 'bg-rose-400/80';
+    if (level <= 45) return 'bg-amber-400/80';
+    return 'bg-cyan-400/75';
   };
 
   const tooltipText = language === 'ja'
@@ -146,30 +155,21 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
   return (
     <div
       className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border backdrop-blur-md shrink-0 select-none transition-all duration-300 ${getContainerStyle()} ${className}`}
+      style={{ forcedColorAdjust: 'none' }}
       title={tooltipText}
     >
       {/* iOS風ミニバッテリーグラフィックゲージ (面で残量がわかる高視認性) */}
-      <div className="relative flex items-center shrink-0 mr-0.5">
+      <div className="relative flex items-center shrink-0 mr-0.5" style={{ forcedColorAdjust: 'none' }}>
         {/* バッテリー本体外枠 */}
         <div className={`relative w-[21px] h-[11px] rounded-[3px] border-[1.5px] p-[1px] flex items-center ${getGaugeBorderColor()}`}>
-          {/* 残量ゲージバー */}
+          {/* 残量ゲージバー (Android反転防止) */}
           <div
             className={`h-full rounded-[1px] transition-all duration-500 ${getGaugeColor()}`}
-            style={{ width: `${Math.max(10, Math.min(100, level))}%` }}
+            style={{ width: `${Math.max(10, Math.min(100, level))}%`, forcedColorAdjust: 'none' }}
           />
         </div>
         {/* バッテリー先端の端子突起 */}
-        <div
-          className={`w-[2px] h-[5px] rounded-r-[1px] -ml-[0.5px] ${
-            isCharging
-              ? 'bg-emerald-400/90'
-              : level <= 20
-              ? 'bg-rose-400/90'
-              : level <= 45
-              ? 'bg-amber-400/90'
-              : 'bg-white/90'
-          }`}
-        />
+        <div className={`w-[2px] h-[5px] rounded-r-[1px] -ml-[0.5px] ${getTerminalColor()}`} />
       </div>
 
       {/* 残量パーセント (純白・高コントラスト・太字フォント) */}
