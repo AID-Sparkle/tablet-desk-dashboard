@@ -1,15 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import {
-  Battery,
-  BatteryCharging,
-  BatteryFull,
-  BatteryMedium,
-  BatteryLow,
-  BatteryWarning,
-  Zap,
-} from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 interface BatteryIndicatorProps {
   language?: 'en' | 'ja';
@@ -94,7 +86,6 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
       } else {
         const hasFully = checkFullyKiosk();
         if (!hasFully) {
-          // どちらも利用できない場合（非対応デスクトップ等）
           setIsSupported(false);
         }
       }
@@ -119,28 +110,33 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
     return null;
   }
 
-  // 残量に応じたアイコンとカラーの選択
-  const getBatteryIcon = () => {
+  // 残量・充電状態に応じたスタイル設計 (黒背景でも圧倒的に見やすい高コントラスト設計)
+  const getContainerStyle = () => {
     if (isCharging) {
-      return <BatteryCharging className="w-3.5 h-3.5 text-emerald-400 shrink-0" />;
+      return 'bg-emerald-950/80 border-emerald-400/60 shadow-[0_0_14px_rgba(16,185,129,0.35)]';
     }
     if (level <= 20) {
-      return <BatteryWarning className="w-3.5 h-3.5 text-rose-400 shrink-0 animate-pulse" />;
+      return 'bg-rose-950/80 border-rose-400/70 shadow-[0_0_14px_rgba(244,63,94,0.4)] animate-pulse';
     }
     if (level <= 45) {
-      return <BatteryLow className="w-3.5 h-3.5 text-amber-300 shrink-0" />;
+      return 'bg-amber-950/70 border-amber-400/60 shadow-[0_0_10px_rgba(251,191,36,0.3)]';
     }
-    if (level <= 75) {
-      return <BatteryMedium className="w-3.5 h-3.5 text-slate-200 shrink-0" />;
-    }
-    return <BatteryFull className="w-3.5 h-3.5 text-emerald-300 shrink-0" />;
+    // 通常時: 黒ベースの画面でもハッキリと輪郭が浮き出る高コントラストガラス
+    return 'bg-slate-800/90 hover:bg-slate-700/90 border-white/35 shadow-md shadow-black/40';
   };
 
-  const getTextColor = () => {
-    if (isCharging) return 'text-emerald-300';
-    if (level <= 20) return 'text-rose-300 font-bold';
-    if (level <= 45) return 'text-amber-200';
-    return 'text-slate-100';
+  const getGaugeColor = () => {
+    if (isCharging) return 'bg-emerald-400';
+    if (level <= 20) return 'bg-rose-400';
+    if (level <= 45) return 'bg-amber-400';
+    return 'bg-white';
+  };
+
+  const getGaugeBorderColor = () => {
+    if (isCharging) return 'border-emerald-400/90';
+    if (level <= 20) return 'border-rose-400/90';
+    if (level <= 45) return 'border-amber-400/90';
+    return 'border-white/90';
   };
 
   const tooltipText = language === 'ja'
@@ -149,17 +145,41 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
 
   return (
     <div
-      className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-xl liquid-glass-pill border border-white/10 shrink-0 text-xs select-none transition-all ${className}`}
+      className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl border backdrop-blur-md shrink-0 select-none transition-all duration-300 ${getContainerStyle()} ${className}`}
       title={tooltipText}
     >
-      {getBatteryIcon()}
+      {/* iOS風ミニバッテリーグラフィックゲージ (面で残量がわかる高視認性) */}
+      <div className="relative flex items-center shrink-0 mr-0.5">
+        {/* バッテリー本体外枠 */}
+        <div className={`relative w-[21px] h-[11px] rounded-[3px] border-[1.5px] p-[1px] flex items-center ${getGaugeBorderColor()}`}>
+          {/* 残量ゲージバー */}
+          <div
+            className={`h-full rounded-[1px] transition-all duration-500 ${getGaugeColor()}`}
+            style={{ width: `${Math.max(10, Math.min(100, level))}%` }}
+          />
+        </div>
+        {/* バッテリー先端の端子突起 */}
+        <div
+          className={`w-[2px] h-[5px] rounded-r-[1px] -ml-[0.5px] ${
+            isCharging
+              ? 'bg-emerald-400/90'
+              : level <= 20
+              ? 'bg-rose-400/90'
+              : level <= 45
+              ? 'bg-amber-400/90'
+              : 'bg-white/90'
+          }`}
+        />
+      </div>
 
-      <span className={`font-mono tabular-nums text-[11px] sm:text-xs font-semibold ${getTextColor()}`}>
+      {/* 残量パーセント (純白・高コントラスト・太字フォント) */}
+      <span className="font-mono tabular-nums text-xs font-black tracking-tight text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)]">
         {level}%
       </span>
 
+      {/* 充電中の稲妻マーク (鮮やかなイエローで点滅) */}
       {isCharging && (
-        <Zap className="w-2.5 h-2.5 text-emerald-400 fill-emerald-400 shrink-0 -ml-0.5 animate-pulse" />
+        <Zap className="w-3 h-3 text-amber-300 fill-amber-300 shrink-0 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)] animate-pulse" />
       )}
     </div>
   );
