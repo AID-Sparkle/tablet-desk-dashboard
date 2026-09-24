@@ -740,7 +740,7 @@ export default function DashboardPage() {
           {spotifyTrack && viewMode !== 'B' && (
             <div
               onClick={() => handleManualSwitch('B')}
-              className="flex items-center gap-2 p-1 sm:p-1.5 pr-2 rounded-2xl liquid-glass-pill hover:bg-white/10 cursor-pointer transition-all w-[155px] sm:w-[210px] md:w-[260px] group shrink-0"
+              className="flex items-center gap-1.5 sm:gap-2 p-1 sm:p-1.5 pr-1.5 sm:pr-2 rounded-2xl liquid-glass-pill hover:bg-white/10 cursor-pointer transition-all w-[135px] sm:w-[165px] lg:w-[185px] group shrink-0"
               title={language === 'en' ? 'Click to open Spotify full view' : 'クリックでSpotify大画面に切り替え'}
             >
               {/* サムネイル */}
@@ -768,9 +768,9 @@ export default function DashboardPage() {
                 </p>
               </div>
 
-              {/* イコライザーバー (再生中のみ) */}
+              {/* イコライザーバー (再生中のみ・大画面のみ表示してタブレットの曲名領域を確保) */}
               {spotifyTrack.isPlaying && (
-                <div className="hidden md:flex items-end gap-0.5 h-3 shrink-0 ml-0.5">
+                <div className="hidden xl:flex items-end gap-0.5 h-3 shrink-0 ml-0.5">
                   <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-1" />
                   <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-2" />
                   <span className="w-0.5 bg-emerald-400 rounded-full animate-eq-3" />
