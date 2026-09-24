@@ -202,12 +202,6 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
             className="w-full h-full select-none"
             style={{ colorScheme: 'only dark' }}
           >
-            <defs>
-              <filter id="clock-hand-shadow" x="-30%" y="-30%" width="160%" height="160%">
-                <feDropShadow dx="0" dy="1.5" stdDeviation="1" floodColor="#000000" floodOpacity="0.6" />
-              </filter>
-            </defs>
-
             {/* 12箇所のアワーマーカー (メモリ) */}
             {[...Array(12)].map((_, i) => {
               const rot = i * 30;
@@ -228,17 +222,42 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
               );
             })}
 
-            {/* 時針 (純白・丸みのあるソリッド針) */}
+            {/* 時針の影 (立体感) */}
+            <line
+              x1="50"
+              y1="54"
+              x2="50"
+              y2="26"
+              stroke="rgba(0, 0, 0, 0.5)"
+              strokeWidth="4"
+              strokeLinecap="round"
+              transform={`rotate(${hourDeg} 50 50) translate(0, 1.5)`}
+              style={{ transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            />
+
+            {/* 時針 (純白・高コントラスト立体針) */}
             <line
               x1="50"
               y1="54"
               x2="50"
               y2="26"
               stroke="#ffffff"
+              strokeWidth="3.4"
+              strokeLinecap="round"
+              transform={`rotate(${hourDeg} 50 50)`}
+              style={{ transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            />
+
+            {/* 分針の影 (立体感) */}
+            <line
+              x1="50"
+              y1="55"
+              x2="50"
+              y2="16"
+              stroke="rgba(0, 0, 0, 0.5)"
               strokeWidth="3.2"
               strokeLinecap="round"
-              filter="url(#clock-hand-shadow)"
-              transform={`rotate(${hourDeg} 50 50)`}
+              transform={`rotate(${minuteDeg} 50 50) translate(0, 1.5)`}
               style={{ transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
             />
 
@@ -249,11 +268,23 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
               x2="50"
               y2="16"
               stroke="#ffffff"
-              strokeWidth="2.2"
+              strokeWidth="2.4"
               strokeLinecap="round"
-              filter="url(#clock-hand-shadow)"
               transform={`rotate(${minuteDeg} 50 50)`}
               style={{ transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)' }}
+            />
+
+            {/* 秒針の影 */}
+            <line
+              x1="50"
+              y1="58"
+              x2="50"
+              y2="12"
+              stroke="rgba(0, 0, 0, 0.35)"
+              strokeWidth="2"
+              strokeLinecap="round"
+              transform={`rotate(${secondDeg} 50 50) translate(0, 1)`}
+              style={{ transition: 'transform 0.15s cubic-bezier(0.4, 2, 0.3, 1)' }}
             />
 
             {/* 秒針 (テーマカラーアクセント・スイープ風) */}
@@ -282,7 +313,7 @@ export const ClockWidget: React.FC<ClockWidgetProps> = ({
             <circle
               cx="50"
               cy="50"
-              r="1"
+              r="1.2"
               fill="#ffffff"
             />
           </svg>
