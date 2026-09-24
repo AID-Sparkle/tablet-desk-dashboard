@@ -113,44 +113,69 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
   // 残量・充電状態に応じたスタイル設計 (黒背景でも圧倒的に見やすい高コントラスト設計)
   const getContainerStyle = () => {
     if (isCharging) {
-      return 'bg-emerald-950/80 border-emerald-400/60 shadow-[0_0_14px_rgba(16,185,129,0.35)]';
+      // 充電中: 呼吸するように脈動する給電パルス発光
+      return 'bg-emerald-950/85 border-emerald-400/70 shadow-[0_0_16px_rgba(16,185,129,0.4)] animate-pulse';
     }
     if (level <= 20) {
-      return 'bg-rose-950/80 border-rose-400/70 shadow-[0_0_14px_rgba(244,63,94,0.4)] animate-pulse';
+      return 'bg-rose-950/85 border-rose-400/80 shadow-[0_0_14px_rgba(244,63,94,0.4)] animate-pulse';
     }
     if (level <= 45) {
       return 'bg-amber-950/70 border-amber-400/60 shadow-[0_0_10px_rgba(251,191,36,0.3)]';
     }
-    // 通常時: 黒ベースの画面でもハッキリと輪郭が浮き出る高コントラストガラス
+    // 通常時: 黒ベースの画面でもハッキリと輪郭が浮き出る高コントラストガラス（静止・ソリッド）
     return 'bg-slate-800/90 hover:bg-slate-700/90 border-white/35 shadow-md shadow-black/40';
   };
 
-  const getGaugeColor = () => {
-    if (isCharging) return 'bg-emerald-400';
-    if (level <= 20) return 'bg-rose-500';
-    if (level <= 45) return 'bg-amber-400';
-    // 通常時: Androidのダークモードで黒反転されない鮮やかな発光シアン
-    return 'bg-cyan-400';
+  const isLowBattery = !isCharging && level <= 20;
+  const isMidBattery = !isCharging && level <= 45 && level > 20;
+
+  // ゲージバーの背景スタイル（テーマカラー連動 or 警告色 or 充電緑）
+  const getGaugeBarStyle = () => {
+    if (isCharging) {
+      return { backgroundColor: '#34d399' }; // emerald-400
+    }
+    if (isLowBattery) {
+      return { backgroundColor: '#f43f5e' }; // rose-500
+    }
+    if (isMidBattery) {
+      return { backgroundColor: '#fbbf24' }; // amber-400
+    }
+    // 通常時: アプリ設定のテーマカラー（--theme-accent）に自動連動！
+    return { backgroundColor: 'var(--theme-accent, #22d3ee)' };
   };
 
-  const getGaugeBorderColor = () => {
-    if (isCharging) return 'border-emerald-400/80';
-    if (level <= 20) return 'border-rose-400/80';
-    if (level <= 45) return 'border-amber-400/80';
-    // 通常時: シアン枠
-    return 'border-cyan-400/75';
+  // 外枠のスタイル（テーマカラー連動 or 警告色 or 充電緑）
+  const getOuterBorderStyle = () => {
+    if (isCharging) {
+      return { borderColor: 'rgba(52, 211, 153, 0.9)' };
+    }
+    if (isLowBattery) {
+      return { borderColor: 'rgba(244, 63, 94, 0.9)' };
+    }
+    if (isMidBattery) {
+      return { borderColor: 'rgba(251, 191, 36, 0.9)' };
+    }
+    // 通常時: テーマカラー枠
+    return { borderColor: 'var(--theme-accent, #22d3ee)' };
   };
 
-  const getTerminalColor = () => {
-    if (isCharging) return 'bg-emerald-400/80';
-    if (level <= 20) return 'bg-rose-400/80';
-    if (level <= 45) return 'bg-amber-400/80';
-    return 'bg-cyan-400/75';
+  // 端子突起のスタイル
+  const getTerminalStyle = () => {
+    if (isCharging) {
+      return { backgroundColor: 'rgba(52, 211, 153, 0.9)' };
+    }
+    if (isLowBattery) {
+      return { backgroundColor: 'rgba(244, 63, 94, 0.9)' };
+    }
+    if (isMidBattery) {
+      return { backgroundColor: 'rgba(251, 191, 36, 0.9)' };
+    }
+    return { backgroundColor: 'var(--theme-accent, #22d3ee)' };
   };
 
   const tooltipText = language === 'ja'
-    ? `バッテリー残量: ${level}%${isCharging ? ' (充電中)' : ''}`
-    : `Battery: ${level}%${isCharging ? ' (Charging)' : ''}`;
+    ? `バッテリー残量: ${level}%${isCharging ? ' (⚡ 充電中)' : ''}`
+    : `Battery: ${level}%${isCharging ? ' (⚡ Charging)' : ''}`;
 
   return (
     <div
@@ -161,15 +186,33 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
       {/* iOS風ミニバッテリーグラフィックゲージ (面で残量がわかる高視認性) */}
       <div className="relative flex items-center shrink-0 mr-0.5" style={{ forcedColorAdjust: 'none' }}>
         {/* バッテリー本体外枠 */}
-        <div className={`relative w-[21px] h-[11px] rounded-[3px] border-[1.5px] p-[1px] flex items-center ${getGaugeBorderColor()}`}>
-          {/* 残量ゲージバー (Android反転防止) */}
+        <div
+          className="relative w-[23px] h-[12px] rounded-[3.5px] border-[1.5px] p-[1px] flex items-center overflow-hidden"
+          style={getOuterBorderStyle()}
+        >
+          {/* 残量ゲージバー (スムーズ伸縮) */}
           <div
-            className={`h-full rounded-[1px] transition-all duration-500 ${getGaugeColor()}`}
-            style={{ width: `${Math.max(10, Math.min(100, level))}%`, forcedColorAdjust: 'none' }}
+            className="h-full rounded-[1px] transition-all duration-500"
+            style={{
+              width: `${Math.max(10, Math.min(100, level))}%`,
+              ...getGaugeBarStyle(),
+              forcedColorAdjust: 'none',
+            }}
           />
+
+          {/* 【色以外の充電中判別ギミック1】充電中のみゲージ中央に白く刻印される⚡シンボル (実機スマホ仕様) */}
+          {isCharging && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <Zap className="w-2.5 h-2.5 text-white fill-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.9)] animate-pulse" />
+            </div>
+          )}
         </div>
+
         {/* バッテリー先端の端子突起 */}
-        <div className={`w-[2px] h-[5px] rounded-r-[1px] -ml-[0.5px] ${getTerminalColor()}`} />
+        <div
+          className="w-[2px] h-[5px] rounded-r-[1px] -ml-[0.5px]"
+          style={getTerminalStyle()}
+        />
       </div>
 
       {/* 残量パーセント (純白・高コントラスト・太字フォント) */}
@@ -177,9 +220,9 @@ export const BatteryIndicator: React.FC<BatteryIndicatorProps> = ({
         {level}%
       </span>
 
-      {/* 充電中の稲妻マーク (鮮やかなイエローで点滅) */}
+      {/* 【色以外の充電中判別ギミック2】充電中のみ数字の横に鮮やかなイエローの⚡マークがパルス点滅 */}
       {isCharging && (
-        <Zap className="w-3 h-3 text-amber-300 fill-amber-300 shrink-0 drop-shadow-[0_0_6px_rgba(251,191,36,0.8)] animate-pulse" />
+        <Zap className="w-3.5 h-3.5 text-amber-300 fill-amber-300 shrink-0 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] animate-pulse" />
       )}
     </div>
   );
