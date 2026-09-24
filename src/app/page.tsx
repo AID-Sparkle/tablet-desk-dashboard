@@ -733,9 +733,9 @@ export default function DashboardPage() {
       {/* ========================================================================
           画面下部: iOSリキッドガラス ナビゲーション & 再生中ミニプレイヤーバー (固定高さ 62px)
       ======================================================================== */}
-      <footer className="relative z-30 h-[62px] liquid-glass border-x-0 border-b-0 border-t border-white/10 px-2.5 sm:px-5 flex items-center justify-between shrink-0">
+      <footer className="relative z-30 h-[62px] liquid-glass border-x-0 border-b-0 border-t border-white/10 px-2.5 sm:px-5 grid grid-cols-[1fr_auto_1fr] items-center shrink-0">
         {/* 左側: 再生中Spotifyミニプレイヤー または ミニ時計＆天気ピル */}
-        <div className="flex items-center gap-2 min-w-0 max-w-[calc(50%-135px)] sm:max-w-[calc(50%-150px)] z-10 overflow-hidden">
+        <div className="flex items-center w-full min-w-0 h-full overflow-hidden">
           {/* Spotify 再生中ミニプレイヤー (State B 以外のときに表示) */}
           {spotifyTrack && viewMode !== 'B' && (
             <div
@@ -807,6 +807,11 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* NEWSタブでSpotify再生UIと時間天気UIが両方ある場合の均等スペーサー 1 */}
+          {spotifyTrack && viewMode === 'C' && (
+            <div className="flex-1 min-w-2" />
+          )}
+
           {/* 【新機能】Spotify (State B) や NEWS (State C) 画面用: 下部ミニ時間＆天気・気温表示 (見切れ完全防止スリム設計) */}
           {(viewMode === 'B' || viewMode === 'C') && (
             <div className="flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 rounded-xl liquid-glass-pill border border-white/10 shrink-0 shadow-sm animate-fadeIn">
@@ -847,6 +852,11 @@ export default function DashboardPage() {
             </div>
           )}
 
+          {/* NEWSタブでSpotify再生UIと時間天気UIが両方ある場合の均等スペーサー 2 (中央タブとの間隔をスペーサー1と完全一致させる) */}
+          {spotifyTrack && viewMode === 'C' && (
+            <div className="flex-1 min-w-2" />
+          )}
+
           {/* State A かつ Spotify非再生時: ネットワーク・ピクセルシフト情報 */}
           {viewMode === 'A' && !spotifyTrack && (
             <div className="flex items-center gap-2">
@@ -881,7 +891,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 中央: 画面切り替えタブ (中央固定・スリム化で左右との衝突を完全防止) */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-1 sm:gap-1.5 liquid-glass-pill p-1 rounded-2xl shadow-lg z-20">
+        <div className="flex items-center justify-center gap-1 sm:gap-1.5 liquid-glass-pill p-1 rounded-2xl shadow-lg z-20 shrink-0">
           <button
             id="tab-main"
             onClick={() => handleManualSwitch('A')}
@@ -931,7 +941,7 @@ export default function DashboardPage() {
         </div>
 
         {/* 右側: 自動ローテーショントグル & バッテリー & 設定 */}
-        <div className="flex items-center gap-1.5 sm:gap-2 z-10 max-w-[calc(50%-135px)] sm:max-w-[calc(50%-150px)] justify-end">
+        <div className="flex items-center gap-1.5 sm:gap-2 z-10 w-full min-w-0 justify-end">
           {/* バッテリー残量インジケーター (対応端末でのみ表示) */}
           {showBatteryIndicator && (
             <BatteryIndicator language={language} />
