@@ -12,15 +12,17 @@ import {
   Radio,
   AlertCircle,
   HelpCircle,
+  History,
 } from 'lucide-react';
 import { SpotifyTrack, SpotifyStatus } from '@/types';
 
 interface SpotifyWidgetProps {
   track: SpotifyTrack | null;
   status: SpotifyStatus;
-  onControl: (command: 'play' | 'pause' | 'next' | 'previous') => void;
+  onControl: (command: 'play' | 'pause' | 'next' | 'previous', uri?: string) => void;
   isControlling?: boolean;
   language?: 'en' | 'ja';
+  recentTracks?: SpotifyTrack[];
 }
 
 function formatDuration(ms: number): string {
@@ -36,6 +38,7 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
   onControl,
   isControlling = false,
   language = 'en',
+  recentTracks = [],
 }) => {
   const [imgError, setImgError] = useState(false);
 
@@ -80,39 +83,115 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
 
   // 2. デバイス待機中（Spotify起動していない、または再生が停止して長時間経過）
   if (status === 'no_device' || !track) {
+    const hasRecentTracks = recentTracks && recentTracks.length > 0;
+
     return (
-      <div className="liquid-glass rounded-3xl p-5 h-full flex flex-col justify-between">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs font-medium text-slate-300 liquid-glass-pill px-3 py-1 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
-            <span>{language === 'en' ? 'Spotify Idle' : 'Spotify 待機中'}</span>
+      <div className="liquid-glass rounded-3xl p-3.5 sm:p-4 h-full flex flex-col justify-between overflow-hidden">
+        {/* ヘッダー */}
+        <div className="flex items-center justify-between pb-2 border-b border-white/10 shrink-0">
+          <div className="flex items-center gap-2 text-xs font-semibold text-slate-200">
+            {hasRecentTracks ? (
+              <>
+                <History className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{language === 'en' ? 'Recently Played' : '最近再生した曲'}</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-400 animate-pulse" />
+                <span className="text-slate-300">{language === 'en' ? 'Spotify Idle' : 'Spotify 待機中'}</span>
+              </>
+            )}
           </div>
-          <span className="text-[11px] text-slate-400">
-            {language === 'en' ? 'Ready on PC / Phone' : 'PC / スマホで再生待機'}
-          </span>
-        </div>
 
-        <div className="my-auto text-center py-3">
-          <Disc3 className="w-12 h-12 mx-auto text-slate-500 animate-spin-slow mb-2" />
-          <p className="text-sm font-semibold text-slate-200">
-            {language === 'en' ? 'No track playing' : '再生中の曲はありません'}
-          </p>
-          <p className="text-xs text-slate-400 mt-1">
-            {language === 'en'
-              ? 'Play music on your device to display here'
-              : 'PCやスマートフォンで曲を再生すると自動表示されます'}
-          </p>
-        </div>
-
-        <div className="flex items-center justify-center gap-3 pt-2 border-t border-white/10">
           <button
             onClick={() => onControl('play')}
             disabled={isControlling}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold transition-all disabled:opacity-50 shadow-md shadow-emerald-500/20 active:scale-95"
+            className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-[11px] font-bold transition-all shadow-sm shadow-emerald-500/25 active:scale-95 disabled:opacity-50 cursor-pointer"
+            title={language === 'en' ? 'Resume playback' : '前回の続きから再生'}
           >
-            <Play className="w-3.5 h-3.5 fill-current" />
+            <Play className="w-3 h-3 fill-current" />
             <span>{language === 'en' ? 'Resume' : '再開'}</span>
           </button>
+        </div>
+
+        {/* 最近再生した曲リスト (最大3曲) */}
+        {hasRecentTracks ? (
+          <div className="flex-1 flex flex-col justify-center divide-y divide-white/5 my-0.5 overflow-hidden">
+            {recentTracks.slice(0, 3).map((item, idx) => (
+              <div
+                key={item.id || idx}
+                onClick={() => {
+                  if (item.uri) {
+                    onControl('play', item.uri);
+                  } else if (item.externalUrl) {
+                    window.open(item.externalUrl, '_blank');
+                  } else {
+                    onControl('play');
+                  }
+                }}
+                className="group flex items-center gap-2.5 py-1.5 px-2 -mx-1 rounded-xl hover:bg-white/10 cursor-pointer transition-all text-left"
+                title={`${item.name} - ${item.artists}`}
+              >
+                {/* サムネイル */}
+                <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-slate-800 shrink-0 border border-white/10">
+                  {item.albumArtUrl ? (
+                    <img
+                      src={item.albumArtUrl}
+                      alt=""
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-slate-400">
+                      <Music className="w-3.5 h-3.5" />
+                    </div>
+                  )}
+                  {/* ホバー時再生オーバーレイ */}
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Play className="w-3.5 h-3.5 text-white fill-current" />
+                  </div>
+                </div>
+
+                {/* 曲名 & アーティスト */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold text-white group-hover:text-emerald-300 truncate transition-colors leading-tight">
+                    {item.name}
+                  </p>
+                  <p className="text-[10px] text-slate-400 truncate leading-tight mt-0.5">
+                    {item.artists}
+                  </p>
+                </div>
+
+                {/* 再生アイコン */}
+                <div className="p-1 rounded-lg text-slate-500 group-hover:text-emerald-400 transition-colors shrink-0">
+                  <Play className="w-3 h-3 fill-current opacity-60 group-hover:opacity-100" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          /* 履歴がない場合の初期待機画面 */
+          <div className="my-auto text-center py-2">
+            <Disc3 className="w-10 h-10 mx-auto text-slate-500 animate-spin-slow mb-1.5 opacity-80" />
+            <p className="text-xs font-semibold text-slate-200">
+              {language === 'en' ? 'No track playing' : '再生中の曲はありません'}
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              {language === 'en'
+                ? 'Play music on your device to display here'
+                : 'PCやスマートフォンで曲を再生すると自動表示されます'}
+            </p>
+          </div>
+        )}
+
+        {/* フッター補足情報 */}
+        <div className="flex items-center justify-between pt-1 border-t border-white/5 text-[10px] text-slate-400 shrink-0">
+          <span className="flex items-center gap-1">
+            <Music className="w-2.5 h-2.5 text-emerald-400" />
+            <span>Spotify Connect</span>
+          </span>
+          <span className="text-slate-400/80">
+            {language === 'en' ? 'Tap track to play' : 'タップで即座に再生'}
+          </span>
         </div>
       </div>
     );

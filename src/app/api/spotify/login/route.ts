@@ -32,6 +32,7 @@ export async function GET(req: NextRequest) {
     'user-read-playback-state',
     'user-modify-playback-state',
     'user-read-currently-playing',
+    'user-read-recently-played',
   ].join(' ');
 
   const authUrl = new URL('https://accounts.spotify.com/authorize');

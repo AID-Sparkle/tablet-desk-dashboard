@@ -65,11 +65,14 @@ export interface SpotifyTrack {
   durationMs: number;
   deviceName?: string;
   deviceType?: string;
+  uri?: string;
+  externalUrl?: string;
 }
 
 export interface SpotifyApiResponse {
   status: SpotifyStatus;
   track?: SpotifyTrack;
+  recentTracks?: SpotifyTrack[];
   error?: string;
 }
 

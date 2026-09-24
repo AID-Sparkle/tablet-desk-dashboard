@@ -18,7 +18,8 @@ interface StateADashboardProps {
   isWeatherLoading: boolean;
   spotifyTrack: SpotifyTrack | null;
   spotifyStatus: SpotifyStatus;
-  onSpotifyControl: (command: 'play' | 'pause' | 'next' | 'previous') => void;
+  recentTracks?: SpotifyTrack[];
+  onSpotifyControl: (command: 'play' | 'pause' | 'next' | 'previous', uri?: string) => void;
   isSpotifyControlling: boolean;
   news: NewsItem[];
   isNewsLoading: boolean;
@@ -36,6 +37,7 @@ export const StateA_Dashboard: React.FC<StateADashboardProps> = ({
   isWeatherLoading,
   spotifyTrack,
   spotifyStatus,
+  recentTracks = [],
   onSpotifyControl,
   isSpotifyControlling,
   news,
@@ -72,6 +74,7 @@ export const StateA_Dashboard: React.FC<StateADashboardProps> = ({
             onControl={onSpotifyControl}
             isControlling={isSpotifyControlling}
             language={language}
+            recentTracks={recentTracks}
           />
         </div>
       </div>

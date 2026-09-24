@@ -134,6 +134,7 @@ export default function DashboardPage() {
   const [spotifyTrack, setSpotifyTrack] = useState<SpotifyTrack | null>(null);
   const [spotifyStatus, setSpotifyStatus] = useState<SpotifyStatus>('loading');
   const [isSpotifyControlling, setIsSpotifyControlling] = useState<boolean>(false);
+  const [recentTracks, setRecentTracks] = useState<SpotifyTrack[]>([]);
 
   const [news, setNews] = useState<NewsItem[]>([]);
   const [isNewsLoading, setIsNewsLoading] = useState<boolean>(true);
@@ -192,6 +193,17 @@ export default function DashboardPage() {
       const savedBattery = localStorage.getItem('desk_show_battery');
       if (savedBattery !== null) {
         setShowBatteryIndicator(savedBattery === 'true');
+      }
+      const savedRecent = localStorage.getItem('desk_spotify_recent_tracks');
+      if (savedRecent) {
+        try {
+          const parsed = JSON.parse(savedRecent);
+          if (Array.isArray(parsed)) {
+            setRecentTracks(parsed);
+          }
+        } catch {
+          // ignore
+        }
       }
     } catch {
       // ignore
@@ -310,8 +322,34 @@ export default function DashboardPage() {
       if (res.ok) {
         const data = await res.json();
         setSpotifyStatus(data.status);
-        const currentTrack = data.track || null;
+        const currentTrack: SpotifyTrack | null = data.track || null;
         setSpotifyTrack(currentTrack);
+
+        // APIから返された最近再生した曲リストがあればマージ
+        const apiRecent: SpotifyTrack[] = data.recentTracks || [];
+        setRecentTracks((prev) => {
+          let merged = [...prev];
+          // もし再生中の曲があれば、先頭に最新曲として追加
+          if (currentTrack) {
+            merged = [
+              currentTrack,
+              ...merged.filter((t) => t.id !== currentTrack.id && t.name !== currentTrack.name),
+            ];
+          }
+          // APIからの履歴を追加（未登録のもの）
+          for (const item of apiRecent) {
+            if (!merged.some((m) => m.id === item.id || (m.name === item.name && m.artists === item.artists))) {
+              merged.push(item);
+            }
+          }
+          const sliced = merged.slice(0, 10);
+          try {
+            localStorage.setItem('desk_spotify_recent_tracks', JSON.stringify(sliced));
+          } catch {
+            // ignore
+          }
+          return sliced;
+        });
       }
     } catch (e) {
       console.error('Spotify fetch error:', e);
@@ -319,14 +357,17 @@ export default function DashboardPage() {
     }
   }, []);
 
-  // Spotify操作 (play, pause, next, previous)
-  const handleSpotifyControl = async (command: 'play' | 'pause' | 'next' | 'previous') => {
+  // Spotify操作 (play, pause, next, previous) または特定曲URI再生
+  const handleSpotifyControl = async (
+    command: 'play' | 'pause' | 'next' | 'previous',
+    uri?: string
+  ) => {
     setIsSpotifyControlling(true);
     try {
       await fetch('/api/spotify/control', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ command }),
+        body: JSON.stringify({ command, uri }),
       });
       // 操作直後に最新状態を即時反映（イベント駆動）
       setTimeout(() => {
@@ -640,6 +681,7 @@ export default function DashboardPage() {
             isWeatherLoading={isWeatherLoading}
             spotifyTrack={spotifyTrack}
             spotifyStatus={spotifyStatus}
+            recentTracks={recentTracks}
             onSpotifyControl={handleSpotifyControl}
             isSpotifyControlling={isSpotifyControlling}
             news={news}

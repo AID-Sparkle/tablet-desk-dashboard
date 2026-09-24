@@ -2,13 +2,19 @@
 // Spotify API ヘルパー
 // ==============================================================================
 
+import { SpotifyTrack } from '@/types';
+
 const TOKEN_ENDPOINT = 'https://accounts.spotify.com/api/token';
 const NOW_PLAYING_ENDPOINT = 'https://api.spotify.com/v1/me/player/currently-playing';
+const RECENTLY_PLAYED_ENDPOINT = 'https://api.spotify.com/v1/me/player/recently-played?limit=5';
 const PLAYER_ENDPOINT = 'https://api.spotify.com/v1/me/player';
 
 // メモリ内トークンキャッシュ
 let cachedAccessToken: string | null = null;
 let tokenExpiresAt: number = 0;
+
+// メモリ内最近再生した曲キャッシュ
+let inMemoryRecentTracks: SpotifyTrack[] = [];
 
 /**
  * Basic認証ヘッダーを取得
@@ -79,12 +85,84 @@ export function invalidateCachedToken(): void {
 }
 
 /**
+ * 最近再生した曲を取得 (API または メモリキャッシュ)
+ */
+export async function getRecentlyPlayed(): Promise<SpotifyTrack[]> {
+  const accessToken = await getAccessToken();
+  if (!accessToken) return inMemoryRecentTracks;
+
+  try {
+    const res = await fetch(RECENTLY_PLAYED_ENDPOINT, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+      cache: 'no-store',
+    });
+
+    if (res.status === 401) {
+      invalidateCachedToken();
+      const retryToken = await getAccessToken();
+      if (!retryToken) return inMemoryRecentTracks;
+      const retryRes = await fetch(RECENTLY_PLAYED_ENDPOINT, {
+        headers: { Authorization: `Bearer ${retryToken}` },
+        cache: 'no-store',
+      });
+      return parseRecentlyPlayedResponse(retryRes);
+    }
+
+    return parseRecentlyPlayedResponse(res);
+  } catch (err) {
+    console.error('Error fetching recently played tracks:', err);
+    return inMemoryRecentTracks;
+  }
+}
+
+async function parseRecentlyPlayedResponse(res: Response): Promise<SpotifyTrack[]> {
+  if (!res.ok) {
+    return inMemoryRecentTracks;
+  }
+  try {
+    const data = await res.json();
+    if (!data || !data.items || !Array.isArray(data.items)) {
+      return inMemoryRecentTracks;
+    }
+
+    const apiTracks: SpotifyTrack[] = data.items.map((item: any) => {
+      const t = item.track;
+      return {
+        id: t.id,
+        name: t.name,
+        artists: t.artists?.map((a: any) => a.name).join(', ') || 'Unknown Artist',
+        album: t.album?.name || '',
+        albumArtUrl: t.album?.images?.[0]?.url || t.album?.images?.[1]?.url,
+        isPlaying: false,
+        progressMs: 0,
+        durationMs: t.duration_ms || 0,
+        uri: t.uri,
+        externalUrl: t.external_urls?.spotify,
+      };
+    });
+
+    // メモリキャッシュと結合し重複排除
+    const combined = [...apiTracks, ...inMemoryRecentTracks];
+    const unique = combined.filter((t, index, self) =>
+      index === self.findIndex((o) => (o.id && o.id === t.id) || (o.name === t.name && o.artists === t.artists))
+    );
+    inMemoryRecentTracks = unique.slice(0, 10);
+    return inMemoryRecentTracks;
+  } catch (e) {
+    console.error('Failed to parse recently played response:', e);
+    return inMemoryRecentTracks;
+  }
+}
+
+/**
  * 現在再生中の楽曲情報を取得
  */
 export async function getNowPlaying() {
   const accessToken = await getAccessToken();
   if (!accessToken) {
-    return { status: 'unconfigured' as const };
+    return { status: 'unconfigured' as const, recentTracks: [] };
   }
 
   const res = await fetch(NOW_PLAYING_ENDPOINT, {
@@ -94,12 +172,12 @@ export async function getNowPlaying() {
     cache: 'no-store',
   });
 
-  // 401 Unauthorized の場合はトークンを再取得して一度だけリトライ
+  let result;
   if (res.status === 401) {
     invalidateCachedToken();
     const retryToken = await getAccessToken();
     if (!retryToken) {
-      return { status: 'error' as const, error: 'Token refresh failed' };
+      return { status: 'error' as const, error: 'Token refresh failed', recentTracks: inMemoryRecentTracks };
     }
     const retryRes = await fetch(NOW_PLAYING_ENDPOINT, {
       headers: {
@@ -107,10 +185,18 @@ export async function getNowPlaying() {
       },
       cache: 'no-store',
     });
-    return parsePlayerResponse(retryRes);
+    result = await parsePlayerResponse(retryRes);
+  } else {
+    result = await parsePlayerResponse(res);
   }
 
-  return parsePlayerResponse(res);
+  // 待機中または再生中問わず、直近の再生履歴を付与
+  const recentTracks = await getRecentlyPlayed();
+
+  return {
+    ...result,
+    recentTracks: recentTracks.slice(0, 5),
+  };
 }
 
 /**
@@ -129,7 +215,7 @@ async function parsePlayerResponse(res: Response) {
     }
 
     const isPlaying = song.is_playing;
-    const track = {
+    const track: SpotifyTrack = {
       id: song.item.id,
       name: song.item.name,
       artists: song.item.artists?.map((_artist: any) => _artist.name).join(', ') || 'Unknown Artist',
@@ -140,7 +226,15 @@ async function parsePlayerResponse(res: Response) {
       durationMs: song.item.duration_ms || 0,
       deviceName: song.device?.name,
       deviceType: song.device?.type,
+      uri: song.item.uri,
+      externalUrl: song.item.external_urls?.spotify,
     };
+
+    // 再生中トラックを直近履歴の先頭に追加
+    inMemoryRecentTracks = [
+      track,
+      ...inMemoryRecentTracks.filter((t) => t.id !== track.id && t.name !== track.name),
+    ].slice(0, 10);
 
     return {
       status: 'connected' as const,
@@ -154,8 +248,9 @@ async function parsePlayerResponse(res: Response) {
 
 /**
  * プレイヤー操作（play, pause, next, previous）
+ * uri を渡すことで特定のトラックを直接再生可能
  */
-export async function controlPlayer(command: 'play' | 'pause' | 'next' | 'previous') {
+export async function controlPlayer(command: 'play' | 'pause' | 'next' | 'previous', uri?: string) {
   const accessToken = await getAccessToken();
   if (!accessToken) {
     return { success: false, error: 'Not configured' };
@@ -163,31 +258,40 @@ export async function controlPlayer(command: 'play' | 'pause' | 'next' | 'previo
 
   let endpoint = `${PLAYER_ENDPOINT}/${command}`;
   let method = 'POST';
+  let body: string | undefined = undefined;
 
-  if (command === 'play' || command === 'pause') {
+  if (command === 'play') {
+    method = 'PUT';
+    if (uri) {
+      body = JSON.stringify({ uris: [uri] });
+    }
+  } else if (command === 'pause') {
     method = 'PUT';
   }
 
-  try {
-    const res = await fetch(endpoint, {
+  const makeRequest = async (token: string) => {
+    return fetch(endpoint, {
       method,
       headers: {
-        Authorization: `Bearer ${accessToken}`,
+        Authorization: `Bearer ${token}`,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
       },
+      ...(body ? { body } : {}),
     });
+  };
+
+  try {
+    let res = await makeRequest(accessToken);
 
     if (res.status === 401) {
       invalidateCachedToken();
       const retryToken = await getAccessToken();
       if (retryToken) {
-        await fetch(endpoint, {
-          method,
-          headers: { Authorization: `Bearer ${retryToken}` },
-        });
+        res = await makeRequest(retryToken);
       }
     }
 
-    return { success: true };
+    return { success: res.ok };
   } catch (error: any) {
     return { success: false, error: error.message };
   }
