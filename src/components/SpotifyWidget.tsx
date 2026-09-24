@@ -284,7 +284,7 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
           )}
         </div>
 
-        <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="flex-1 min-w-0 overflow-hidden w-0">
           <MarqueeText
             text={track.name}
             className="text-sm sm:text-base font-bold text-white drop-shadow-sm"

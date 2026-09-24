@@ -760,7 +760,7 @@ export default function DashboardPage() {
               </div>
 
               {/* 曲名 & アーティスト (入りきらない場合は電光掲示板のようにシームレススライド) */}
-              <div className="min-w-0 flex-1 overflow-hidden">
+              <div className="min-w-0 flex-1 overflow-hidden w-0">
                 <MarqueeText
                   text={spotifyTrack.name}
                   className="text-[11px] sm:text-xs font-bold text-white group-hover:text-emerald-300 transition-colors leading-tight"

@@ -5,92 +5,113 @@ import React, { useRef, useState, useEffect } from 'react';
 interface MarqueeTextProps {
   text: string;
   className?: string;
-  speed?: number; // 1ループあたりの秒数 (未指定時は文字長から自動計算)
+  speed?: number; // 1秒あたりの移動ピクセル数 (デフォルト: 26px/s)
   gradientMask?: boolean;
 }
 
 /**
- * 電光掲示板風ティッカースクロールコンポーネント
- * テキストがコンテナ幅に収まる場合は通常表示（静止）、
- * はみ出る場合のみ滑らかな無限スライドアニメーションを発動します。
+ * 電光掲示板風ティッカースクロールコンポーネント (高精度ResizeObserver＆オフスクリーン計測)
+ * テキストがコンテナ表示枠を0.5pxでも超えた場合、即座に電光掲示板のように滑らかなシームレススライドを開始します。
  */
 export const MarqueeText: React.FC<MarqueeTextProps> = ({
   text,
   className = '',
-  speed,
+  speed = 26,
   gradientMask = true,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const textRef = useRef<HTMLSpanElement>(null);
+  const measureRef = useRef<HTMLSpanElement>(null);
   const [isOverflow, setIsOverflow] = useState(false);
   const [duration, setDuration] = useState(8);
 
   useEffect(() => {
-    const checkOverflow = () => {
-      if (containerRef.current && textRef.current) {
-        const containerWidth = containerRef.current.clientWidth;
-        const textWidth = textRef.current.scrollWidth;
-        const overflow = textWidth > containerWidth + 2;
-        setIsOverflow(overflow);
+    const updateOverflow = () => {
+      if (!containerRef.current || !measureRef.current) return;
+      const containerWidth = containerRef.current.getBoundingClientRect().width;
+      const textWidth = measureRef.current.getBoundingClientRect().width;
 
-        if (overflow) {
-          // テキスト幅に応じた自然なスクロール速度（1秒あたり約28px）
-          const calculatedDuration = Math.max(6, Math.min(22, textWidth / 28));
-          setDuration(speed || calculatedDuration);
-        }
+      // 0.5pxでもコンテナ幅を超えていれば即座に電光掲示板スライドを発動
+      const overflow = textWidth > containerWidth + 0.5;
+      setIsOverflow(overflow);
+
+      if (overflow) {
+        // テキスト幅 + 間の余白(24px) を移動速度で割って快適な秒数を算出
+        const totalDistance = textWidth + 24;
+        const calculatedDuration = Math.max(5, Math.min(25, totalDistance / speed));
+        setDuration(calculatedDuration);
       }
     };
 
-    checkOverflow();
-    window.addEventListener('resize', checkOverflow);
-    // レンダリング直後やフォント反映後の微小ズレ対策
-    const timer1 = setTimeout(checkOverflow, 100);
-    const timer2 = setTimeout(checkOverflow, 400);
+    updateOverflow();
+
+    // 画面リサイズや親要素の幅変化をリアルタイム監視
+    let resizeObserver: ResizeObserver | null = null;
+    if (typeof ResizeObserver !== 'undefined' && containerRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        updateOverflow();
+      });
+      resizeObserver.observe(containerRef.current);
+    }
+
+    const t1 = setTimeout(updateOverflow, 60);
+    const t2 = setTimeout(updateOverflow, 200);
+    const t3 = setTimeout(updateOverflow, 600);
 
     return () => {
-      window.removeEventListener('resize', checkOverflow);
-      clearTimeout(timer1);
-      clearTimeout(timer2);
+      if (resizeObserver) resizeObserver.disconnect();
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
     };
   }, [text, speed]);
-
-  if (!isOverflow) {
-    return (
-      <div ref={containerRef} className={`truncate ${className}`} title={text}>
-        <span ref={textRef}>{text}</span>
-      </div>
-    );
-  }
 
   return (
     <div
       ref={containerRef}
-      className={`overflow-hidden relative whitespace-nowrap select-none ${className}`}
+      className={`overflow-hidden relative whitespace-nowrap select-none w-full min-w-0 max-w-full ${className}`}
       style={
-        gradientMask
+        isOverflow && gradientMask
           ? {
               maskImage:
-                'linear-gradient(to right, transparent 0%, black 6px, black calc(100% - 6px), transparent 100%)',
+                'linear-gradient(to right, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%)',
               WebkitMaskImage:
-                'linear-gradient(to right, transparent 0%, black 6px, black calc(100% - 6px), transparent 100%)',
+                'linear-gradient(to right, transparent 0%, black 8px, black calc(100% - 8px), transparent 100%)',
             }
           : undefined
       }
       title={text}
     >
-      <div
-        className="inline-flex marquee-track"
+      {/* 画面外で常に正確なテキスト自然長を計測する非表示span (スタイリングを親と完全同期) */}
+      <span
+        ref={measureRef}
+        aria-hidden="true"
+        className="opacity-0 pointer-events-none whitespace-nowrap inline-block shrink-0"
         style={{
-          animation: `marquee-scroll ${duration}s linear infinite`,
+          visibility: 'hidden',
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          zIndex: -1,
         }}
       >
-        <span ref={textRef} className="pr-6 inline-block shrink-0">
-          {text}
-        </span>
-        <span className="pr-6 inline-block shrink-0" aria-hidden="true">
-          {text}
-        </span>
-      </div>
+        {text}
+      </span>
+
+      {isOverflow ? (
+        <div
+          className="inline-flex marquee-track"
+          style={{
+            animation: `marquee-scroll ${duration}s linear infinite`,
+          }}
+        >
+          <span className="pr-6 inline-block shrink-0">{text}</span>
+          <span className="pr-6 inline-block shrink-0" aria-hidden="true">
+            {text}
+          </span>
+        </div>
+      ) : (
+        <span className="inline-block truncate w-full">{text}</span>
+      )}
     </div>
   );
 };
