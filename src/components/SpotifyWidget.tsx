@@ -15,6 +15,7 @@ import {
   History,
 } from 'lucide-react';
 import { SpotifyTrack, SpotifyStatus } from '@/types';
+import { MarqueeText } from './MarqueeText';
 
 interface SpotifyWidgetProps {
   track: SpotifyTrack | null;
@@ -283,13 +284,15 @@ export const SpotifyWidget: React.FC<SpotifyWidgetProps> = ({
           )}
         </div>
 
-        <div className="flex-1 min-w-0">
-          <p className="text-sm sm:text-base font-bold text-white truncate drop-shadow-sm">
-            {track.name}
-          </p>
-          <p className="text-xs font-semibold text-emerald-300 truncate mt-0.5">
-            {track.artists}
-          </p>
+        <div className="flex-1 min-w-0 overflow-hidden">
+          <MarqueeText
+            text={track.name}
+            className="text-sm sm:text-base font-bold text-white drop-shadow-sm"
+          />
+          <MarqueeText
+            text={track.artists}
+            className="text-xs font-semibold text-emerald-300 mt-0.5"
+          />
           <p className="text-[11px] text-slate-400 truncate mt-0.5">
             {track.album}
           </p>

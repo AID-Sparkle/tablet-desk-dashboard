@@ -36,6 +36,7 @@ import { StateA_Dashboard } from '@/components/StateA_Dashboard';
 import { StateB_SpotifyFocus } from '@/components/StateB_SpotifyFocus';
 import { StateC_NewsFocus } from '@/components/StateC_NewsFocus';
 import { BatteryIndicator } from '@/components/BatteryIndicator';
+import { MarqueeText } from '@/components/MarqueeText';
 import { getSmallWeatherIcon } from '@/components/WeatherWidget';
 import { DASHBOARD_CONFIG } from '@/config/dashboard';
 import {
@@ -758,14 +759,16 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* 曲名 & アーティスト */}
-              <div className="min-w-0 flex-1">
-                <p className="text-[11px] sm:text-xs font-bold text-white truncate group-hover:text-emerald-300 transition-colors leading-tight">
-                  {spotifyTrack.name}
-                </p>
-                <p className="text-[9px] sm:text-[10px] text-slate-400 truncate leading-tight">
-                  {spotifyTrack.artists}
-                </p>
+              {/* 曲名 & アーティスト (入りきらない場合は電光掲示板のようにシームレススライド) */}
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <MarqueeText
+                  text={spotifyTrack.name}
+                  className="text-[11px] sm:text-xs font-bold text-white group-hover:text-emerald-300 transition-colors leading-tight"
+                />
+                <MarqueeText
+                  text={spotifyTrack.artists}
+                  className="text-[9px] sm:text-[10px] text-slate-400 leading-tight mt-0.5"
+                />
               </div>
 
               {/* イコライザーバー (再生中のみ・大画面のみ表示してタブレットの曲名領域を確保) */}

@@ -124,3 +124,25 @@
 .animate-orb-2 {
   animation: orb-float-2 20s ease-in-out infinite;
 }
+
+/* ==============================================================================
+   電光掲示板風ティッカースクロールアニメーション (入りきらない曲名等のシームレススライド)
+   ============================================================================== */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.marquee-track {
+  display: inline-flex;
+  white-space: nowrap;
+  will-change: transform;
+}
+
+.marquee-track:hover {
+  animation-play-state: paused;
+}
