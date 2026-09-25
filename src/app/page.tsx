@@ -10,7 +10,6 @@ import {
   Play,
   PlayCircle,
   Settings,
-  ShieldCheck,
   SkipForward,
   Wifi,
   WifiOff,
@@ -31,7 +30,6 @@ import {
   Home,
   BatteryCharging,
 } from 'lucide-react';
-import { PixelShifter } from '@/components/PixelShifter';
 import { StateA_Dashboard } from '@/components/StateA_Dashboard';
 import { StateB_SpotifyFocus } from '@/components/StateB_SpotifyFocus';
 import { StateC_NewsFocus } from '@/components/StateC_NewsFocus';
@@ -54,7 +52,6 @@ import {
   SpotifyTrack,
   SpotifyStatus,
   NewsItem,
-  PixelShiftOffset,
   SwitchBotMeterData,
   SwitchBotDevice,
 } from '@/types';
@@ -65,7 +62,6 @@ export default function DashboardPage() {
   // ----------------------------------------------------------------------------
   const [viewMode, setViewMode] = useState<ViewMode>('A');
   const [isAutoRotationActive, setIsAutoRotationActive] = useState<boolean>(true);
-  const [pixelOffset, setPixelOffset] = useState<PixelShiftOffset>({ x: 0, y: 0 });
 
   // ----------------------------------------------------------------------------
   // ユーザー設定 (localStorage永続化)
@@ -242,16 +238,6 @@ export default function DashboardPage() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
     };
-  }, []);
-
-  // ----------------------------------------------------------------------------
-  // 2. ピクセルシフト更新関数（焼き付き防止: ±10〜12pxのランダム微小移動）
-  // ----------------------------------------------------------------------------
-  const applyNextPixelShift = useCallback(() => {
-    const maxPx = DASHBOARD_CONFIG.pixelShiftPx;
-    const x = Math.floor(Math.random() * (maxPx * 2 + 1)) - maxPx;
-    const y = Math.floor(Math.random() * (maxPx * 2 + 1)) - maxPx;
-    setPixelOffset({ x, y });
   }, []);
 
   // ----------------------------------------------------------------------------
@@ -532,9 +518,8 @@ export default function DashboardPage() {
         }
         return next;
       });
-      applyNextPixelShift();
     }, autoRotationInterval * 1000);
-  }, [isAutoRotationActive, autoRotationInterval, applyNextPixelShift]);
+  }, [isAutoRotationActive, autoRotationInterval]);
 
   useEffect(() => {
     resetRotationSchedule();
@@ -548,7 +533,6 @@ export default function DashboardPage() {
   // 手動で画面を切り替えた時のハンドラ (※切り替えから設定秒数きっちり維持)
   const handleManualSwitch = (mode: ViewMode) => {
     setViewMode(mode);
-    applyNextPixelShift();
     // タイマーを即時リセットし、今からきっちり指定秒数後に次の切り替えをスケジュール
     resetRotationSchedule();
   };
@@ -668,7 +652,7 @@ export default function DashboardPage() {
       {/* ========================================================================
           メインコンテンツ (焼き付き防止ピクセルシフター & 滑らかな1000msクロスフェード)
       ======================================================================== */}
-      <PixelShifter offset={pixelOffset} className="relative z-10 flex-1 w-full h-[calc(100vh-62px)] overflow-hidden">
+      <div className="relative z-10 flex-1 w-full h-[calc(100vh-62px)] overflow-hidden">
         {/* State A: 統合ダッシュボード */}
         <div
           className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
@@ -729,7 +713,7 @@ export default function DashboardPage() {
             language={language}
           />
         </div>
-      </PixelShifter>
+      </div>
 
       {/* ========================================================================
           画面下部: iOSリキッドガラス ナビゲーション & 再生中ミニプレイヤーバー (固定高さ 62px)
@@ -877,17 +861,6 @@ export default function DashboardPage() {
                     <WifiOff className="w-3 h-3 text-rose-400 sm:hidden" />
                   </>
                 )}
-              </div>
-
-              <div
-                className="hidden xl:flex items-center gap-1.5 text-[10px] text-slate-300 liquid-glass-pill px-2.5 py-1 rounded-full"
-                title={`Pixel Shift: x=${pixelOffset.x}px, y=${pixelOffset.y}px`}
-              >
-                <ShieldCheck
-                  className="w-3 h-3"
-                  style={{ color: 'var(--theme-accent, #22d3ee)' }}
-                />
-                <span>Shift ({pixelOffset.x}, {pixelOffset.y})</span>
               </div>
             </div>
           )}
