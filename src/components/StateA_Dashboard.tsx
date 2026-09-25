@@ -56,8 +56,6 @@ export const StateA_Dashboard: React.FC<StateADashboardProps> = ({
       <div className="flex-1 grid grid-cols-12 gap-2.5 sm:gap-3 min-h-0">
         {/* 時計 */}
         <div className="col-span-12 lg:col-span-7 xl:col-span-7 liquid-glass rounded-3xl p-4 sm:p-5 md:p-6 flex flex-col justify-center relative overflow-hidden h-full">
-          <div className="absolute top-0 right-0 w-80 h-80 bg-cyan-400/10 rounded-full blur-3xl pointer-events-none" />
-          <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
           <ClockWidget
             size="large"
             isOnline={isOnline}

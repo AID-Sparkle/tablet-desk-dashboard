@@ -653,10 +653,10 @@ export default function DashboardPage() {
           <div className="absolute inset-0 bg-black/45 backdrop-blur-[1.5px] transition-all duration-1000" />
         )}
 
-        {/* 有機的アンビエントオーブ (写真の上でもほのかに輝き、リキッドガラスのすりガラス感を最大化) */}
+        {/* 有機的アンビエントオーブ (標準壁紙のときのみ美しく輝き、写真や動画壁紙のときは完全非表示) */}
         <div
           className={`absolute inset-0 overflow-hidden transition-opacity duration-1000 ${
-            activeWallpaperUrl ? 'opacity-35' : 'opacity-100'
+            activeWallpaperUrl ? 'opacity-0 pointer-events-none' : 'opacity-100'
           }`}
         >
           <div className="absolute -top-[10%] -left-[10%] w-[55vw] h-[55vw] rounded-full bg-cyan-600/15 blur-[120px] animate-orb-1" />
@@ -671,7 +671,7 @@ export default function DashboardPage() {
       <PixelShifter offset={pixelOffset} className="relative z-10 flex-1 w-full h-[calc(100vh-62px)] overflow-hidden">
         {/* State A: 統合ダッシュボード */}
         <div
-          className={`absolute inset-1 sm:inset-1.5 transition-all duration-1000 ease-in-out ${
+          className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
             viewMode === 'A'
               ? 'opacity-100 scale-100 pointer-events-auto z-10'
               : 'opacity-0 scale-[0.985] pointer-events-none z-0'
@@ -699,7 +699,7 @@ export default function DashboardPage() {
 
         {/* State B: Spotify フルフォーカス */}
         <div
-          className={`absolute inset-1 sm:inset-1.5 transition-all duration-1000 ease-in-out ${
+          className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
             viewMode === 'B'
               ? 'opacity-100 scale-100 pointer-events-auto z-10'
               : 'opacity-0 scale-[0.985] pointer-events-none z-0'
@@ -716,7 +716,7 @@ export default function DashboardPage() {
 
         {/* State C: ニュース/RSS フルフォーカス */}
         <div
-          className={`absolute inset-1 sm:inset-1.5 transition-all duration-1000 ease-in-out ${
+          className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
             viewMode === 'C'
               ? 'opacity-100 scale-100 pointer-events-auto z-10'
               : 'opacity-0 scale-[0.985] pointer-events-none z-0'
