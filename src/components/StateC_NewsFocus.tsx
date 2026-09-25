@@ -28,7 +28,7 @@ export const StateC_NewsFocus: React.FC<StateCNewsFocusProps> = ({
       : news.filter((item) => item.category === selectedCategory);
 
   return (
-    <div className="h-full w-full flex flex-col justify-between p-2">
+    <div className="h-full w-full flex flex-col justify-between p-0.5 sm:p-1">
       {/* トップバー: タイトル & カテゴリフィルター */}
       <div className="liquid-glass rounded-3xl px-6 py-3 mb-3 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-3">

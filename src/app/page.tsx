@@ -668,10 +668,10 @@ export default function DashboardPage() {
       {/* ========================================================================
           メインコンテンツ (焼き付き防止ピクセルシフター & 滑らかな1000msクロスフェード)
       ======================================================================== */}
-      <PixelShifter offset={pixelOffset} className="relative z-10 flex-1 w-full h-[calc(100vh-62px)] p-3 sm:p-4 overflow-hidden">
+      <PixelShifter offset={pixelOffset} className="relative z-10 flex-1 w-full h-[calc(100vh-62px)] overflow-hidden">
         {/* State A: 統合ダッシュボード */}
         <div
-          className={`absolute inset-3 sm:inset-4 transition-all duration-1000 ease-in-out ${
+          className={`absolute inset-1 sm:inset-1.5 transition-all duration-1000 ease-in-out ${
             viewMode === 'A'
               ? 'opacity-100 scale-100 pointer-events-auto z-10'
               : 'opacity-0 scale-[0.985] pointer-events-none z-0'
@@ -699,7 +699,7 @@ export default function DashboardPage() {
 
         {/* State B: Spotify フルフォーカス */}
         <div
-          className={`absolute inset-3 sm:inset-4 transition-all duration-1000 ease-in-out ${
+          className={`absolute inset-1 sm:inset-1.5 transition-all duration-1000 ease-in-out ${
             viewMode === 'B'
               ? 'opacity-100 scale-100 pointer-events-auto z-10'
               : 'opacity-0 scale-[0.985] pointer-events-none z-0'
@@ -716,7 +716,7 @@ export default function DashboardPage() {
 
         {/* State C: ニュース/RSS フルフォーカス */}
         <div
-          className={`absolute inset-3 sm:inset-4 transition-all duration-1000 ease-in-out ${
+          className={`absolute inset-1 sm:inset-1.5 transition-all duration-1000 ease-in-out ${
             viewMode === 'C'
               ? 'opacity-100 scale-100 pointer-events-auto z-10'
               : 'opacity-0 scale-[0.985] pointer-events-none z-0'
